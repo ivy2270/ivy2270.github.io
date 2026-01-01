@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雨歌作品集</title>
+    <link rel="icon" type="image/png" href="https://rainchord.com/wp-content/uploads/2019/06/favicon-o.png">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'JFOpenHuninn';
+            src: url('https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf') format('truetype');
+            font-display: swap;
+        }
+
+        :root {
+            --primary-color: #1abc9c;
+            --primary-light: #48d1b8;
+            --primary-dark: #16a085;
+            --secondary-color: #FFECB3;
+            --secondary-color-darker: #FFD54F;
+            --bg-color: #f0f8f7;
+            --card-bg: #ffffff;
+            --text-color: #34495e;
+            --shadow: 0 15px 35px rgba(26, 188, 156, 0.2);
+            --border-radius: 20px;
+        }
+
+        body {
+            font-family: 'JFOpenHuninn', '微軟正黑體', sans-serif;
+            margin: 0; padding: 0; color: var(--text-color);
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            background-image: url('https://rainchord.s3.ap-east-2.amazonaws.com/bg-s.png');
+            background-size: cover; background-position: center; background-attachment: fixed;
+            position: relative;
+        }
+
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.75) 0%, rgba(240,248,247,0.6) 100%);
+            z-index: -1;
+        }
+
+        .container { max-width: 1100px; width: 90%; margin: 0 auto; padding: 15px 0; }
+
+        header {
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+            position: sticky; top: 0; z-index: 100;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(26, 188, 156, 0.1);
+        }
+
+        h1 {
+            color: var(--primary-dark); text-align: center;
+            margin: 0 0 10px 0; font-size: 1.8rem; letter-spacing: 1px;
+        }
+
+        /* 手機滑動標籤優化 */
+        .category-nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+        
+        @media (max-width: 768px) {
+            .category-nav {
+                justify-content: flex-start;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding: 10px 5%;
+                margin: 0 -5.5%;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .category-nav::-webkit-scrollbar { display: none; }
+        }
+
+        .category-btn {
+            font-family: 'JFOpenHuninn', '微軟正黑體', sans-serif;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text-color); border: 1px solid rgba(26, 188, 156, 0.2);
+            padding: 8px 20px; border-radius: 50px; cursor: pointer;
+            transition: all 0.3s ease; font-weight: 600; font-size: 0.95rem;
+            flex-shrink: 0; white-space: nowrap;
+        }
+
+        .category-btn:hover { background-color: var(--secondary-color); transform: scale(1.05); }
+        .category-btn.active {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+            color: white; border: none; box-shadow: 0 4px 12px rgba(26, 188, 156, 0.4);
+        }
+
+        #projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; margin-top: 20px; }
+
+        .project-card {
+            background: var(--card-bg); border-radius: var(--border-radius);
+            padding: 25px; box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.03);
+            cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; flex-direction: column; justify-content: flex-start;
+            min-height: 140px; position: relative; overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .project-card::after {
+            content: ''; position: absolute; top: -15px; right: -15px;
+            width: 40px; height: 40px; background: var(--secondary-color);
+            transform: rotate(45deg); opacity: 0.4; transition: 0.3s;
+        }
+
+        .project-card:hover { transform: translateY(-10px); box-shadow: var(--shadow); border-color: var(--primary-light); }
+        .project-card:hover::after { opacity: 1; background: var(--primary-light); }
+
+        .project-card h3 { color: var(--primary-dark); margin: 0 0 12px 0; font-size: 1.3rem; z-index: 1; }
+        .project-card p { font-size: 0.95rem; color: #607d8b; line-height: 1.5; margin: 0; z-index: 1; }
+
+        .modal {
+            position: fixed; z-index: 2000; left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            display: none; align-items: center; justify-content: center;
+        }
+
+        .modal.open { display: flex; }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 35px; border-radius: 30px;
+            width: 90%; max-width: 600px;
+            max-height: 85vh; overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            border: 5px solid var(--secondary-color);
+        }
+
+        .close-btn { position: absolute; top: 15px; right: 20px; color: #aaa; font-size: 28px; cursor: pointer; }
+
+        .link-container { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ddd; }
+        .link-container a {
+            background-color: var(--secondary-color); color: var(--text-color);
+            padding: 10px 20px; border-radius: 12px; text-decoration: none;
+            font-weight: bold; font-size: 0.9rem; transition: 0.2s;
+            border-bottom: 3px solid var(--secondary-color-darker);
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+
+        footer { text-align: center; padding: 40px 0; color: #888; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <h1 id="page-title">雨歌作品集</h1>
+            <div id="category-nav" class="category-nav"></div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="status-message" style="text-align: center; padding: 50px;">載入中，請稍候...</div>
+        <div id="projects-grid"></div>
+    </main>
+
+    <div id="projectModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div class="modal-body">
+                <h2 id="modal-title"></h2>
+                <p id="modal-description"></p>
+                <div id="modal-links" class="link-container"></div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Made in Love by Ivy</p>
+        <button onclick="manualRefresh()" style="background:none; border:none; color:#ccc; font-size:11px; cursor:pointer; text-decoration:underline;">強制重載資料庫</button>
+    </footer>
+
+<script>
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzlG1a8jbkrAWtkapWrfSMjLwzsJMjm_A0QXuC2zJvEBTKBN9ij1YhxQ82Xg79jSt0MRw/exec'; 
+
+const projectsGrid = document.getElementById('projects-grid');
+const categoryNav = document.getElementById('category-nav');
+const statusMessage = document.getElementById('status-message');
+const modal = document.getElementById('projectModal');
+
+let allProjects = [];
+let currentCategory = 'All';
+
+function closeModal() { modal.classList.remove('open'); }
+window.onclick = (e) => { if (e.target == modal) closeModal(); };
+
+async function fetchProjects() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userKey = urlParams.get('key');
+    const CACHE_KEY = `projects_cache_${userKey || 'public'}`;
+    
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    if (cachedData) {
+        allProjects = JSON.parse(cachedData);
+        processData(allProjects);
+    }
+
+    try {
+        const now = Date.now();
+        const finalUrl = userKey ? `${GAS_API_URL}?key=${userKey}&t=${now}` : `${GAS_API_URL}?t=${now}`;
+        const response = await fetch(finalUrl);
+        const result = await response.json();
+        
+        if (result.data) {
+            const newDataString = JSON.stringify(result.data);
+            if (newDataString !== cachedData) {
+                allProjects = result.data.filter(p => p.Title && p.Category);
+                localStorage.setItem(CACHE_KEY, newDataString);
+                processData(allProjects);
+            }
+        }
+    } catch (error) {
+        if (!cachedData) statusMessage.textContent = "載入失敗，請檢查網路連線。";
+    }
+}
+
+function processData(projects) {
+    statusMessage.style.display = 'none';
+    renderCategories(projects);
+    filterAndRenderProjects(currentCategory);
+}
+
+function renderCategories(projects) {
+    const categories = new Set(['All']);
+    projects.forEach(p => {
+        if (p.Category) {
+            p.Category.toString().split(',').forEach(cat => categories.add(cat.trim()));
+        }
+    });
+
+    categoryNav.innerHTML = '';
+    categories.forEach(category => {
+        const btn = document.createElement('button');
+        btn.className = 'category-btn' + (category === currentCategory ? ' active' : '');
+        btn.textContent = category;
+        btn.onclick = () => {
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentCategory = category;
+            filterAndRenderProjects(category);
+            // 捲動標籤到中間
+            btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        };
+        categoryNav.appendChild(btn);
+    });
+}
+
+function filterAndRenderProjects(category) {
+    const filtered = allProjects.filter(p => {
+        if (category === 'All') return true;
+        const cats = p.Category.toString().split(',').map(c => c.trim());
+        return cats.includes(category);
+    });
+
+    projectsGrid.innerHTML = filtered.length ? '' : `<div style="text-align: center; grid-column: 1 / -1; padding: 50px;">此分類下目前沒有作品。</div>`;
+
+    filtered.forEach(project => {
+        const card = document.createElement('div');
+        card.className = 'project-card';
+        card.onclick = () => showProjectModal(project);
+        card.innerHTML = `
+            <h3><i class="ri-rocket-line"></i> ${project.Title}</h3>
+            <p>${project.Description ? project.Description.substring(0, 60) + '...' : '無說明'}</p>
+        `;
+        projectsGrid.appendChild(card);
+    });
+}
+
+function showProjectModal(project) {
+    document.getElementById('modal-title').textContent = project.Title;
+    document.getElementById('modal-description').textContent = project.Description || '無詳細說明。';
+    const container = document.getElementById('modal-links');
+    container.innerHTML = '';
+
+    const iconMap = { 'demo': 'ri-eye-line', 'github': 'ri-github-fill', '文件': 'ri-file-text-line' };
+    for (let i = 1; i <= 5; i++) {
+        const url = project[`Link${i}`], text = project[`Link${i}_Text`];
+        if (url && text) {
+            const icon = Object.keys(iconMap).find(k => text.toLowerCase().includes(k)) || 'ri-links-line';
+            const a = document.createElement('a');
+            a.href = url; a.target = '_blank';
+            a.innerHTML = `<i class="${icon}"></i> ${text}`;
+            container.appendChild(a);
+        }
+    }
+    modal.classList.add('open');
+}
+
+function manualRefresh() {
+    if(confirm("確定要清空快取並重新抓取嗎？")) {
+        localStorage.clear();
+        location.reload();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', fetchProjects);
+</script>
+</body>
+</html>
