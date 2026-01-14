@@ -132,7 +132,12 @@
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
             border: 5px solid var(--secondary-color);
         }
-
+		/* 讓說明文字保留換行與空白 */
+#modal-description {
+    white-space: pre-wrap;
+    line-height: 1.6; /* 順便增加一點行高，閱讀比較舒服 */
+    word-break: break-all; /* 防止長英文單字撐破視窗 */
+}
         .close-btn { position: absolute; top: 15px; right: 20px; color: #aaa; font-size: 28px; cursor: pointer; }
 
         .link-container { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 25px; padding-top: 20px; border-top: 1px dashed #ddd; }
@@ -304,3 +309,4 @@ document.addEventListener('DOMContentLoaded', fetchProjects);
 </script>
 </body>
 </html>
+
