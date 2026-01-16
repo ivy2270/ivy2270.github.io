@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>晚宴接待查詢系統</title>
+<link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    <style>
+        :root {
+            --primary-color: #1a237e;
+            --accent-color: #bf360c;
+            --bg-color: #f0f2f5;
+        }
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-color);
+            margin: 0; padding: 10px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .container { width: 100%; max-width: 600px; }
+        h1 { color: var(--primary-color); text-align: center; font-size: 24px; margin: 15px 0; }
+
+        .search-container {
+            position: sticky; top: 5px; z-index: 100;
+            display: flex; gap: 8px; background: var(--bg-color);
+            padding: 10px 0; width: 100%;
+        }
+        .search-box {
+            flex: 1; padding: 15px 20px; font-size: 20px;
+            border: 3px solid var(--primary-color); border-radius: 12px;
+            outline: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .clear-btn {
+            padding: 0 15px; font-size: 16px; font-weight: bold;
+            background-color: #90a4ae; color: white;
+            border: none; border-radius: 12px; cursor: pointer;
+        }
+
+        .guest-card {
+            background: white; border-radius: 12px; padding: 18px;
+            margin-bottom: 12px; display: flex; justify-content: space-between;
+            align-items: center; border-left: 10px solid var(--primary-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .guest-info { flex: 1; }
+        .guest-name { font-size: 28px; font-weight: bold; color: #1a1a1a; margin-bottom: 4px; }
+        .guest-org { font-size: 16px; color: #444; font-weight: 500; }
+        .guest-job { font-size: 15px; color: #777; }
+        .guest-note {
+            display: inline-block; background-color: #fff9c4; color: var(--accent-color);
+            font-size: 14px; padding: 3px 8px; border-radius: 4px; margin-top: 8px;
+            border: 1px solid #ffe082;
+        }
+
+        .table-badge {
+            background-color: var(--primary-color); color: white;
+            padding: 8px; border-radius: 10px; text-align: center; min-width: 75px;
+        }
+        .table-label { font-size: 11px; display: block; opacity: 0.8; }
+        .table-num { font-size: 30px; font-weight: 900; }
+
+        #status { text-align: center; color: #666; font-size: 16px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>賓客歡迎查詢系統</h1>
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-box" placeholder="輸入姓名、單位或職稱..." autocomplete="off">
+        <button id="clearBtn" class="clear-btn">清空</button>
+    </div>
+    <div id="status">正在載入資料...</div>
+    <div id="resultsList"></div>
+</div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbxmcFoTi_durh7ZGKyQ7d7wmuHPyth47MB0oypGxfBcGF_WIEZ9qhqVj-bscudAl_M/exec';
+    let guestData = [];
+    const { pinyin } = pinyinPro;
+
+    async function init() {
+        try {
+            const response = await fetch(scriptURL);
+            const rawData = await response.json();
+            guestData = rawData.map(g => ({
+                name: String(g['姓名'] || ""),
+                org: String(g['單位'] || ""),
+                job: String(g['職稱'] || ""),
+                table: String(g['桌次'] || ""),
+                note: String(g['備註'] || ""),
+                firstZh: g['姓名'] ? pinyin(String(g['姓名']).charAt(0), { type: 'zh' }).charAt(0) : ''
+            }));
+            document.getElementById('status').innerText = '系統就緒，請輸入關鍵字';
+        } catch (e) {
+            document.getElementById('status').innerText = '連線失敗，請檢查網路';
+        }
+    }
+
+    const input = document.getElementById('searchInput');
+    const list = document.getElementById('resultsList');
+    const status = document.getElementById('status');
+    const clearBtn = document.getElementById('clearBtn');
+
+    clearBtn.addEventListener('click', () => {
+        input.value = '';
+        list.innerHTML = '';
+        status.style.display = 'block';
+        input.focus();
+    });
+
+    input.addEventListener('input', (e) => {
+        const key = e.target.value.trim().toLowerCase();
+        if (!key) { list.innerHTML = ''; status.style.display = 'block'; return; }
+
+        const keyFirstZh = pinyin(key.charAt(0), { type: 'zh' }).charAt(0);
+
+        // 1. 先篩選出所有符合條件的賓客
+        let matched = guestData.filter(g => {
+            const nameMatch = g.name.toLowerCase().includes(key);
+            const orgMatch = g.org.toLowerCase().includes(key);
+            const jobMatch = g.job.toLowerCase().includes(key);
+            const fuzzyMatch = (g.firstZh === keyFirstZh);
+            return nameMatch || orgMatch || jobMatch || fuzzyMatch;
+        });
+
+        // 2. 進行權重排序
+        matched.sort((a, b) => {
+            function getWeight(g) {
+                const n = g.name.toLowerCase();
+                const o = g.org.toLowerCase();
+                const j = g.job.toLowerCase();
+                
+                if (n === key) return 100;           // 完全符合姓名（最高優先）
+                if (n.startsWith(key)) return 80;    // 姓名開頭符合
+                if (n.includes(key)) return 60;      // 姓名中間包含關鍵字
+                if (o.includes(key)) return 40;      // 單位符合
+                if (j.includes(key)) return 20;      // 職稱符合
+                if (g.firstZh === keyFirstZh) return 1; // 僅首音模糊符合（最後）
+                return 0;
+            }
+            return getWeight(b) - getWeight(a);
+        });
+
+        render(matched);
+    });
+
+    function render(data) {
+        list.innerHTML = '';
+        if (data.length === 0) {
+            status.style.display = 'block';
+            status.innerText = '查無結果';
+        } else {
+            status.style.display = 'none';
+            data.forEach(g => {
+                const noteSection = g.note ? `<div class="guest-note">💡 ${g.note}</div>` : '';
+                const item = document.createElement('div');
+                item.className = 'guest-card';
+                item.innerHTML = `
+                    <div class="guest-info">
+                        <div class="guest-name">${g.name}</div>
+                        <div class="guest-org">${g.org}</div>
+                        <div class="guest-job">${g.job}</div>
+                        ${noteSection}
+                    </div>
+                    <div class="table-badge">
+                        <span class="table-label">桌次</span>
+                        <span class="table-num">${g.table}</span>
+                    </div>`;
+                list.appendChild(item);
+            });
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>
