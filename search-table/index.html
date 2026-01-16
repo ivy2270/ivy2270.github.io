@@ -6,62 +6,82 @@
     <title>晚宴接待查詢系統</title>
 <link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">
     <script src="https://unpkg.com/pinyin-pro"></script>
-    <style>
-        :root {
-            --primary-color: #1a237e;
-            --accent-color: #bf360c;
-            --bg-color: #f0f2f5;
-        }
-        body {
-            font-family: "Microsoft JhengHei", sans-serif;
-            background-color: var(--bg-color);
-            margin: 0; padding: 10px;
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .container { width: 100%; max-width: 600px; }
-        h1 { color: var(--primary-color); text-align: center; font-size: 24px; margin: 15px 0; }
+<style>
+    :root {
+        --primary-color: #1a237e;
+        --accent-color: #bf360c;
+        --bg-color: #f0f2f5;
+    }
+    body {
+        font-family: "Microsoft JhengHei", sans-serif;
+        background-color: var(--bg-color);
+        margin: 0; padding: 10px;
+        display: flex; flex-direction: column; align-items: center;
+    }
+    .container { width: 100%; max-width: 600px; box-sizing: border-box; }
+    h1 { color: var(--primary-color); text-align: center; font-size: 22px; margin: 10px 0; }
 
-        .search-container {
-            position: sticky; top: 5px; z-index: 100;
-            display: flex; gap: 8px; background: var(--bg-color);
-            padding: 10px 0; width: 100%;
-        }
-        .search-box {
-            flex: 1; padding: 15px 20px; font-size: 20px;
-            border: 3px solid var(--primary-color); border-radius: 12px;
-            outline: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        .clear-btn {
-            padding: 0 15px; font-size: 16px; font-weight: bold;
-            background-color: #90a4ae; color: white;
-            border: none; border-radius: 12px; cursor: pointer;
-        }
+    /* 關鍵優化：防止手機寬度不足時清空按鈕被卡掉 */
+    .search-container {
+        position: sticky; top: 0; z-index: 100;
+        display: flex; 
+        gap: 8px; 
+        background: var(--bg-color);
+        padding: 10px 0; 
+        width: 100%;
+        box-sizing: border-box; /* 確保 padding 不會撐破寬度 */
+    }
+    .search-box {
+        flex: 1; 
+        min-width: 0; /* 這是關鍵：允許 input 縮小，不擠壓按鈕 */
+        padding: 12px 15px; 
+        font-size: 18px;
+        border: 2px solid var(--primary-color); 
+        border-radius: 10px;
+        outline: none; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .clear-btn {
+        flex-shrink: 0; /* 禁止按鈕被壓縮 */
+        padding: 0 15px; 
+        font-size: 16px; 
+        font-weight: bold;
+        background-color: #90a4ae; 
+        color: white;
+        border: none; 
+        border-radius: 10px; 
+        cursor: pointer;
+        white-space: nowrap; /* 強制文字不換行 */
+    }
 
-        .guest-card {
-            background: white; border-radius: 12px; padding: 18px;
-            margin-bottom: 12px; display: flex; justify-content: space-between;
-            align-items: center; border-left: 10px solid var(--primary-color);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .guest-info { flex: 1; }
-        .guest-name { font-size: 28px; font-weight: bold; color: #1a1a1a; margin-bottom: 4px; }
-        .guest-org { font-size: 16px; color: #444; font-weight: 500; }
-        .guest-job { font-size: 15px; color: #777; }
-        .guest-note {
-            display: inline-block; background-color: #fff9c4; color: var(--accent-color);
-            font-size: 14px; padding: 3px 8px; border-radius: 4px; margin-top: 8px;
-            border: 1px solid #ffe082;
-        }
+    /* 賓客卡片調整 */
+    .guest-card {
+        background: white; border-radius: 12px; padding: 15px;
+        margin-bottom: 12px; display: flex; justify-content: space-between;
+        align-items: center; border-left: 8px solid var(--primary-color);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .guest-info { flex: 1; min-width: 0; }
+    .guest-name { font-size: 24px; font-weight: bold; color: #1a1a1a; margin-bottom: 2px; }
+    .guest-org, .guest-job { 
+        font-size: 14px; color: #555; 
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; 
+    }
+    .guest-note {
+        display: inline-block; background-color: #fff9c4; color: var(--accent-color);
+        font-size: 13px; padding: 2px 8px; border-radius: 4px; margin-top: 5px;
+    }
 
-        .table-badge {
-            background-color: var(--primary-color); color: white;
-            padding: 8px; border-radius: 10px; text-align: center; min-width: 75px;
-        }
-        .table-label { font-size: 11px; display: block; opacity: 0.8; }
-        .table-num { font-size: 30px; font-weight: 900; }
+    .table-badge {
+        background-color: var(--primary-color); color: white;
+        padding: 6px; border-radius: 8px; text-align: center; 
+        min-width: 65px; margin-left: 10px; flex-shrink: 0;
+    }
+    .table-label { font-size: 10px; display: block; opacity: 0.8; }
+    .table-num { font-size: 26px; font-weight: 900; }
 
-        #status { text-align: center; color: #666; font-size: 16px; margin-top: 20px; }
-    </style>
+    #status { text-align: center; color: #666; font-size: 16px; margin-top: 20px; }
+</style>
 </head>
 <body>
 
@@ -71,7 +91,7 @@
         <input type="text" id="searchInput" class="search-box" placeholder="輸入姓名、單位或職稱..." autocomplete="off">
         <button id="clearBtn" class="clear-btn">清空</button>
     </div>
-    <div id="status">正在載入資料...</div>
+    <div id="status">正在同步名冊...</div>
     <div id="resultsList"></div>
 </div>
 
