@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微時記帳 - 簡約生活小工具</title>
+<link rel="icon" type="image/svg+xml" href="money-bag-money-svgrepo-com.svg">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+	<link rel="manifest" href="manifest.json">
+	<link rel="preload" 
+      href="https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf" 
+      as="font" 
+      type="font/ttf" 
+      crossorigin="anonymous">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+</head>
+<body>
+    <div id="app" class="container" v-cloak>
+        <h2 style="text-align: center; color: var(--primary); margin: 20px 0;">🎀 {{ currentTabTitle }}</h2>
+
+        <div v-if="activeTab === 'list'">
+            <div class="card log-item" v-for="item in processedLogs" :key="item.ID" @click="editLog(item)">
+                <div style="display: flex; align-items: center;">
+                    <div class="thumb-box">
+                        <img v-if="item.imageUrl" :src="item.imageUrl" class="thumb" @click.stop="openLightbox(item.imageUrl)">
+                        <div v-else class="thumb-placeholder">💰</div>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong style="font-size: 1.1em;">{{ item.品項 }}</strong>
+                            <span style="color: #ff7675; font-weight: bold;">${{ item.金額 }}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                            {{ item.displayDate }} | <span class="tag">{{ item.小分類 }}</span> | {{ item.付款方式 }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div v-if="processedLogs.length === 0" style="text-align:center; color:#ccc; margin-top:50px;">
+                目前沒有帳目喔，點右下角新增一個吧！
+            </div>
+        </div>
+
+        <div v-if="activeTab === 'chart'">
+            <div class="card">
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
+                    <input type="date" v-model="filter.start" class="date-input">
+                    至
+                    <input type="date" v-model="filter.end" class="date-input">
+                </div>
+                <div style="position: relative; height:300px;">
+                    <canvas id="myChart"></canvas>
+                </div>
+            </div>
+            <div class="card"><p>總支出：<strong style="color: #ff7675;">${{ totalExpense }}</strong></p></div>
+        </div>
+
+        <div v-if="activeTab === 'settings'">
+            <div class="card">
+                <h3>📂 分類管理</h3>
+                <div v-for="(cat, index) in categoryData" :key="'cat'+index" class="setting-row">
+                    <input v-model="cat.main" placeholder="大類" style="width: 70px;">
+                    <input v-model="cat.subRaw" placeholder="小類(逗號隔開)" style="flex: 1;">
+                    <div class="move-btns">
+                        <button @click="moveItem(categoryData, index, -1)">▲</button>
+                        <button @click="moveItem(categoryData, index, 1)">▼</button>
+                    </div>
+                    <button @click="categoryData.splice(index, 1)" class="btn-del-circle">✕</button>
+                </div>
+                <button @click="categoryData.push({main:'', subRaw:''})" class="btn-small">+ 新增大分類</button>
+
+                <h3 style="margin-top:20px;">💳 付款方式</h3>
+                <div v-for="(p, index) in payments" :key="'pay'+index" class="setting-row">
+                    <input v-model="payments[index]" style="flex:1">
+                    <div class="move-btns">
+                        <button @click="moveItem(payments, index, -1)">▲</button>
+                        <button @click="moveItem(payments, index, 1)">▼</button>
+                    </div>
+                    <button @click="payments.splice(index, 1)" class="btn-del-circle">✕</button>
+                </div>
+                <button @click="payments.push('')" class="btn-small">+ 新增付款方式</button>
+                <button class="btn" @click="submitAdd" :disabled="loading">
+    <span v-if="loading" class="loading-spinner"></span>
+    {{ loading ? '同步中...' : '確定儲存' }}
+</button>
+            </div>
+        </div>
+
+        <div class="modal-overlay" v-if="showAddModal" @click.self="closeModal">
+            <div class="modal-content">
+                <h3 style="text-align:center">{{ form.id ? '✏️ 修改支出' : '✨ 新增支出' }}</h3>
+                <div class="category-grid">
+                    <div v-for="cat in categoryData" class="cat-btn" :class="{active: selectedMain === cat.main}" @click="selectMain(cat.main)">
+                        {{ cat.main || '未命名' }}
+                    </div>
+                </div>
+                <div v-if="selectedMain" class="sub-category-box">
+                    <div v-for="sub in getSubCategories(selectedMain)" class="cat-btn-sub" :class="{active: form.subCategory === sub}" @click="form.subCategory = sub">
+                        {{ sub }}
+                    </div>
+                </div>
+<div class="form-group">
+    <input type="date" v-model="form.date">
+    <input type="text" placeholder="品項" v-model="form.item">
+    <input type="number" placeholder="金額" v-model="form.amount">
+    <select v-model="form.payment">
+        <option value="" disabled>付款方式</option>
+        <option v-for="p in payments" :value="p">{{ p }}</option>
+    </select>
+    <textarea placeholder="備註" v-model="form.note" rows="2"></textarea>
+    
+    <div style="margin-top:10px; border: 1px dashed #ccc; padding: 10px; border-radius: 10px;">
+        <label style="font-size: 12px; color: #888; display: block; margin-bottom: 5px;">📷 圖片管理：</label>
+        
+        <div v-if="form.imageData || form.imageUrl" style="position: relative; margin-bottom: 10px;">
+            <img :src="form.imageData || form.imageUrl" style="width: 100%; border-radius: 8px; display: block;">
+            
+            <button @click="removeImage" class="btn-del-img" type="button">✕ 移除圖片</button>
+        </div>
+
+        <input type="file" accept="image/*" @change="handleFileUpload" id="fileInput">
+    </div>
+</div>
+                <button class="btn" @click="submitAdd" :disabled="loading">
+    <span v-if="loading" class="loading-spinner"></span>
+    {{ loading ? '同步中...' : '確定儲存' }}
+</button>
+                <button v-if="form.id" class="btn btn-danger" @click="deleteLog(form.id)">刪除此筆</button>
+                <button class="btn btn-cancel" @click="closeModal">取消</button>
+            </div>
+        </div>
+
+        <div class="fab" @click="openAddModal">＋</div>
+        <div class="lightbox" v-if="lightboxUrl" @click="lightboxUrl = null"><img :src="lightboxUrl"></div>
+        <nav class="bottom-nav">
+            <div class="nav-item" :class="{active: activeTab==='list'}" @click="activeTab='list'">📋<div>明細</div></div>
+            <div class="nav-item" :class="{active: activeTab==='chart'}" @click="activeTab='chart'">📊<div>統計</div></div>
+            <div class="nav-item" :class="{active: activeTab==='settings'}" @click="activeTab='settings'">⚙️<div>設定</div></div>
+        </nav>
+    </div>
+    <script src="script.js"></script>
+	<script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('PWA 服務註冊成功！範圍:', reg.scope))
+                    .catch(err => console.log('PWA 服務註冊失敗:', err));
+            });
+        }
+    </script>
+</body>
+</body>
+</html>
