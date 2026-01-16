@@ -1,0 +1,322 @@
+@font-face {
+  font-family: 'OpenHuninn';
+  /* 網址必須與 HTML preload 的 href 完全一致 */
+  src: url('https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 強制套用到所有地方 */
+body, input, select, textarea, button {
+  font-family: 'OpenHuninn', 'Noto Sans TC', sans-serif !important;
+}
+
+/* 讓標題稍微加粗一點更漂亮 */
+h2, h3, strong {
+  font-weight: 700;
+}
+
+:root {
+  --primary: #ffb7b2;    /* 粉紅 */
+  --secondary: #b2e2f2;  /* 嫩藍 */
+  --accent: #ffdac1;     /* 橘黃 */
+  --bg: #fff9f9;
+  --text: #5d5d5d;
+  --white: #ffffff;
+}
+
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding-bottom: 70px; /* 為底部導覽留空間 */
+}
+
+/* 可愛圓角容器 */
+.container {
+  padding: 15px;
+  max-width: 500px;
+  margin: auto;
+}
+
+.card {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 15px rgba(255, 183, 178, 0.2);
+}
+
+/* 下方導覽列 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  max-width: 500px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--white);
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+  border-radius: 25px 25px 0 0;
+  box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
+  z-index: 100;
+}
+
+.nav-item {
+  text-align: center;
+  font-size: 12px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.nav-item.active {
+  color: var(--primary);
+}
+
+/* 右下角浮動按鈕 */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: 85px;
+  width: 60px;
+  height: 60px;
+  background: var(--primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 30px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  cursor: pointer;
+  z-index: 99;
+}
+
+/* 彈窗樣式 */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  width: 90%;
+  max-width: 400px;
+  border-radius: 25px;
+  padding: 20px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* 可愛按鈕與輸入框 */
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border: 2px solid var(--accent);
+  border-radius: 15px;
+  box-sizing: border-box;
+}
+
+.btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 15px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+/* 分類按鈕組 */
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 10px 0;
+}
+.cat-btn {
+    padding: 10px;
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    background: white;
+    cursor: pointer;
+    text-align: center;
+    font-size: 14px;
+    transition: 0.2s;
+}
+.cat-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* 刪除按鈕美化 */
+.btn-del {
+    background: #ff7675;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 圖片縮圖美化 */
+.thumb-box {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-right: 12px;
+    background: #eee;
+}
+.thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 預設圖示盒與對齊 */
+.thumb-box {
+    width: 50px; height: 50px; 
+    border-radius: 10px; 
+    margin-right: 12px; 
+    overflow: hidden;
+    background: #f0f0f0;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.thumb-placeholder { font-size: 24px; }
+.log-item { transition: transform 0.1s; cursor: pointer; }
+.log-item:active { transform: scale(0.98); }
+
+/* 設定頁面樣式 */
+.setting-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.btn-small { background: #eee; border: none; padding: 5px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+.btn-del-circle { background: #ffb7b2; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; }
+
+/* 彈窗內的小分類按鈕 */
+.sub-category-box {
+    background: #fff9f9; padding: 10px; border-radius: 15px; 
+    margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px;
+}
+.cat-btn-sub {
+    padding: 6px 12px; border: 1px solid var(--primary); border-radius: 20px;
+    font-size: 13px; background: white; cursor: pointer;
+}
+.cat-btn-sub.active { background: var(--primary); color: white; }
+
+/* 燈箱 */
+.lightbox {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.9); z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+}
+.lightbox img { max-width: 90%; max-height: 80%; border-radius: 10px; border: 3px solid white; }
+.lightbox-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; cursor: pointer; }
+
+/* 常用按鈕變體 */
+.btn-danger { background: #ff7675; margin-top: 10px; }
+.btn-cancel { background: #ccc; margin-top: 5px; }
+
+[v-cloak] { display: none; }
+
+.move-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.move-btns button {
+    width: 24px;
+    height: 18px;
+    font-size: 10px;
+    padding: 0;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #888;
+}
+
+.move-btns button:hover {
+    background: var(--accent);
+    color: white;
+}
+
+.setting-row {
+    background: #fff;
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 點擊縮放動畫 */
+.btn, .cat-btn, .cat-btn-sub, .nav-item, .fab, .btn-del-circle, .log-item {
+    transition: transform 0.1s ease, opacity 0.2s;
+    cursor: pointer;
+    user-select: none;
+}
+
+.btn:active, .cat-btn:active, .cat-btn-sub:active, .nav-item:active, .fab:active, .log-item:active {
+    transform: scale(0.92); /* 點擊時縮小 */
+    opacity: 0.8;
+}
+
+/* 儲存中的旋轉動畫 */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 5px;
+}
+
+/* 讓統計畫布撐滿容器 */
+#myChart {
+    max-width: 100% !important;
+    max-height: 100% !important;
+}
+
+.btn-del-img {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(255, 118, 117, 0.9);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-del-img:active {
+    transform: scale(0.9);
+}
