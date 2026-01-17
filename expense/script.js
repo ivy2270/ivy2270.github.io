@@ -8,6 +8,7 @@ createApp({
             showAddModal: false,
             loading: false, // 全域與按鈕的載入狀態
             lightboxUrl: null,
+            toastMsg: null, // 新增：Toast 訊息文字
             logs: [],
             categoryData: [], // 格式: {main: '食', subRaw: '早餐,午餐', subs: []}
             payments: [],
@@ -29,7 +30,6 @@ createApp({
         processedLogs() {
             return this.logs
                 .filter(log => {
-                    // 修正時差：統一轉為 YYYY-MM-DD 字串進行字串比較
                     const d = this.formatToISODate(log.日期);
                     return d >= this.filter.start && d <= this.filter.end;
                 })
@@ -44,13 +44,11 @@ createApp({
         }
     },
     watch: {
-        // 重要：監聽標籤切換，當進入「統計」分頁時才繪製圖表
         activeTab(newTab) {
             if (newTab === 'chart') {
                 this.$nextTick(() => this.renderChart());
             }
         },
-        // 當過濾日期或資料更新時，如果人在統計頁，就自動重畫圖表
         'filter.start'() { if(this.activeTab === 'chart') this.renderChart(); },
         'filter.end'() { if(this.activeTab === 'chart') this.renderChart(); },
         logs: {
@@ -59,7 +57,13 @@ createApp({
         }
     },
     methods: {
-        // --- 工具：日期處理 ---
+        // --- 工具：美化通知與日期處理 ---
+        showToast(msg) {
+            this.toastMsg = msg;
+            setTimeout(() => {
+                this.toastMsg = null;
+            }, 2000);
+        },
         formatToISODate(dateVal) {
             const d = new Date(dateVal);
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -70,58 +74,51 @@ createApp({
         },
 
         // --- 初始化與資料讀取 ---
-async init() {
-    // --- 1. 啟動瞬間：立刻抓取所有快取（包含帳目） ---
-    const cacheCats = localStorage.getItem('cache_categories');
-    const cachePayments = localStorage.getItem('cache_payments');
-    const cacheLogs = localStorage.getItem('cache_logs'); // 新增：抓帳目快取
+        async init() {
+            const cacheCats = localStorage.getItem('cache_categories');
+            const cachePayments = localStorage.getItem('cache_payments');
+            const cacheLogs = localStorage.getItem('cache_logs');
 
-    if (cacheCats) this.categoryData = JSON.parse(cacheCats);
-    if (cachePayments) this.payments = JSON.parse(cachePayments);
-    if (cacheLogs) this.logs = JSON.parse(cacheLogs); // 新增：立刻填入帳目，避免看到空白提示
-    
-    // --- 2. 設定預設日期 (這要放在抓 logs 後面，processedLogs 才能正確過濾) ---
-    const now = new Date();
-    this.filter.start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-    this.filter.end = this.formatToISODate(now);
+            if (cacheCats) this.categoryData = JSON.parse(cacheCats);
+            if (cachePayments) this.payments = JSON.parse(cachePayments);
+            if (cacheLogs) this.logs = JSON.parse(cacheLogs); 
+            
+            const now = new Date();
+            this.filter.start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+            this.filter.end = this.formatToISODate(now);
 
-    // --- 3. 開始連網同步更新 ---
-    this.loading = true;
-    try {
-        const res = await fetch(`${GAS_URL}?action=init`);
-        const data = await res.json();
-        
-        this.categoryData = data.categories.map(c => ({
-            main: c.main,
-            subRaw: c.subs.join(','),
-            subs: c.subs
-        }));
-        this.payments = data.payments;
+            this.loading = true;
+            try {
+                const res = await fetch(`${GAS_URL}?action=init`);
+                const data = await res.json();
+                
+                this.categoryData = data.categories.map(c => ({
+                    main: c.main,
+                    subRaw: c.subs.join(','),
+                    subs: c.subs
+                }));
+                this.payments = data.payments;
 
-        // 更新快取
-        localStorage.setItem('cache_categories', JSON.stringify(this.categoryData));
-        localStorage.setItem('cache_payments', JSON.stringify(this.payments));
+                localStorage.setItem('cache_categories', JSON.stringify(this.categoryData));
+                localStorage.setItem('cache_payments', JSON.stringify(this.payments));
 
-        // 預設展開第一個分類
-        if (this.categoryData.length > 0) this.selectMain(this.categoryData[0].main);
+                if (this.categoryData.length > 0) this.selectMain(this.categoryData[0].main);
 
-        await this.fetchLogs();
-    } catch (e) {
-        console.error("初始化失敗", e);
-    } finally {
-        this.loading = false;
-    }
-},
+                await this.fetchLogs();
+            } catch (e) {
+                console.error("初始化失敗", e);
+                this.showToast("❌ 初始化連線失敗");
+            } finally {
+                this.loading = false;
+            }
+        },
 
-async fetchLogs() {
-    // 這裡維持原本的 fetch 邏輯即可，快取已在 init 載入過，這裡負責更新
-    const res = await fetch(`${GAS_URL}?action=getLogs`);
-    const data = await res.json();
-    this.logs = data;
-
-    // 存入最新資料到快取
-    localStorage.setItem('cache_logs', JSON.stringify(data));
-},
+        async fetchLogs() {
+            const res = await fetch(`${GAS_URL}?action=getLogs`);
+            const data = await res.json();
+            this.logs = data;
+            localStorage.setItem('cache_logs', JSON.stringify(data));
+        },
 
         // --- 彈窗與表單操作 ---
         selectMain(mainName) {
@@ -138,7 +135,6 @@ async fetchLogs() {
             this.showAddModal = true;
         },
         editLog(item) {
-            // 代入完整資料至表單
             this.form = {
                 id: item.ID,
                 date: this.formatToISODate(item.日期),
@@ -148,9 +144,9 @@ async fetchLogs() {
                 subCategory: item.小分類,
                 payment: item.付款方式,
                 note: item.備註 || '',
-                imageData: '', // 新選取的圖片
-                imageUrl: item.imageUrl, // 現有的圖片網址
-                deleteImage: false // 初始化為不刪除
+                imageData: '', 
+                imageUrl: item.imageUrl, 
+                deleteImage: false 
             };
             this.selectedMain = item.大分類;
             this.showAddModal = true;
@@ -167,22 +163,25 @@ async fetchLogs() {
             this.resetForm();
         },
         removeImage() {
-            this.form.imageData = ''; // 清除新選取的圖
-            this.form.imageUrl = null; // 清除原本預覽
-            this.form.deleteImage = true; // 標記要刪除雲端圖片
+            this.form.imageData = ''; 
+            this.form.imageUrl = null; 
+            this.form.deleteImage = true; 
         },
 
         // --- 資料同步 (POST 至 GAS) ---
         async submitAdd() {
-            if (!this.form.item || !this.form.amount || !this.form.subCategory) return alert("請填寫品項、金額與分類");
-            this.loading = true; // 按鈕會進入 Loading 狀態
+            if (!this.form.item || !this.form.amount || !this.form.subCategory) {
+                return this.showToast("⚠️ 請填寫品項、金額與分類");
+            }
+            this.loading = true;
             const action = this.form.id ? 'update' : 'add';
             try {
                 await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action, ...this.form }) });
+                this.showToast(this.form.id ? "✅ 已更新明細" : "✅ 已新增明細");
                 this.showAddModal = false;
                 await this.fetchLogs();
             } catch (e) { 
-                alert("連線失敗，請稍後再試"); 
+                this.showToast("❌ 連線失敗，請稍後再試"); 
             } finally {
                 this.loading = false;
             }
@@ -190,26 +189,30 @@ async fetchLogs() {
         async deleteLog(id) {
             if (!confirm("確定要刪除這筆支出嗎？")) return;
             this.loading = true;
-            await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id }) });
-            this.showAddModal = false;
-            await this.fetchLogs();
-            this.loading = false;
+            try {
+                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id }) });
+                this.showToast("🗑️ 已刪除資料");
+                this.showAddModal = false;
+                await this.fetchLogs();
+            } catch (e) {
+                this.showToast("❌ 刪除失敗");
+            } finally {
+                this.loading = false;
+            }
         },
         async saveSettings() {
             this.loading = true;
             try {
-                // 同步付款方式
                 await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePayments', data: this.payments.filter(p => p) }) });
-                // 同步分類資料
                 const catData = this.categoryData.map(c => ({
                     main: c.main,
                     subs: c.subRaw.split(',').map(s => s.trim()).filter(s => s)
                 }));
                 await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateCategories', data: catData }) });
-                alert("設定已儲存！");
-                this.init(); // 重新載入設定
+                this.showToast("✨ 設定已成功儲存");
+                await this.init(); 
             } catch (e) {
-                alert("儲存設定時發生錯誤");
+                this.showToast("❌ 儲存設定時發生錯誤");
             } finally {
                 this.loading = false;
             }
@@ -265,8 +268,6 @@ async fetchLogs() {
         handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
-            
-            // 當選取新圖片時，取消刪除標記
             this.form.deleteImage = false;
 
             const reader = new FileReader();
