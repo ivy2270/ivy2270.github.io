@@ -136,13 +136,18 @@
 
         <div class="fab" @click="openAddModal">＋</div>
         <div class="lightbox" v-if="lightboxUrl" @click="lightboxUrl = null"><img :src="lightboxUrl"></div>
+		<transition name="fade">
+    <div v-if="toastMsg" class="toast-overlay">
+        <div class="toast-box">{{ toastMsg }}</div>
+    </div>
+</transition>
         <nav class="bottom-nav">
             <div class="nav-item" :class="{active: activeTab==='list'}" @click="activeTab='list'">📋<div>明細</div></div>
             <div class="nav-item" :class="{active: activeTab==='chart'}" @click="activeTab='chart'">📊<div>統計</div></div>
             <div class="nav-item" :class="{active: activeTab==='settings'}" @click="activeTab='settings'">⚙️<div>設定</div></div>
         </nav>
     </div>
-    <script src="script.js"></script>
+    <script src="script01.js"></script>
 	<script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
