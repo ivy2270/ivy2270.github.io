@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>微時記帳 - 簡約生活小工具</title>
     <link rel="icon" type="image/svg+xml" href="money-bag-money-svgrepo-com.svg">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style02.css">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
@@ -15,11 +15,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body>
-    <div id="app" class="container" v-cloak 
-         @touchstart="handleTouchStart" 
-         @touchend="handleTouchEnd">   
+    <div id="app" class="container" v-cloak>   
     
-        <h2 style="text-align: center; color: var(--primary); margin: 20px 0;">🎀 {{ currentTabTitle }}<span style="font-size: 10px; opacity: 0.3;">v1.0.5</span></h2>
+        <h2 style="text-align: center; color: var(--primary); margin: 20px 0;">🎀 {{ currentTabTitle }}<span style="font-size: 10px; opacity: 0.3;">v2.0</span></h2>
 
         <transition name="tab-content-fade" mode="out-in">
             <div :key="activeTab">
@@ -135,7 +133,16 @@
         </div>
 
         <div class="fab" @click="openAddModal">＋</div>
-        <div class="lightbox" v-if="lightboxUrl" @click="lightboxUrl = null"><img :src="lightboxUrl"></div>
+        <div v-if="lightboxUrl" class="lightbox" @click.self="closeLightbox">
+    <img :src="lightboxUrl" 
+         :style="zoomStyle"
+         @touchstart="handleTouchStartImg" 
+         @touchmove="handleTouchMoveImg" 
+         @touchend="handleTouchEndImg"
+         alt="放大圖"
+         draggable="false">
+    <button class="close-btn" @click="closeLightbox">✕</button>
+</div>
         
         <transition name="fade">
             <div v-if="toastMsg" class="toast-overlay">
@@ -150,7 +157,7 @@
         </nav>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script04.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
