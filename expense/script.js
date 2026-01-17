@@ -20,11 +20,19 @@ createApp({
                 note: '', imageData: '', imageUrl: null, deleteImage: false 
             },
             filter: { start: '', end: '' },
-            // 手勢座標記錄
+            // 分頁切換手勢座標
             touchStartX: 0,
             touchEndX: 0,
             touchStartY: 0,
-            touchEndY: 0
+            touchEndY: 0,
+            // 燈箱圖片縮放與平移狀態
+            zoomScale: 1,
+            lastScale: 1,
+            offsetX: 0,
+            offsetY: 0,
+            touchStartDist: 0,
+            touchStartPoint: { x: 0, y: 0 },
+            isDragging: false
         }
     },
     computed: {
@@ -46,13 +54,19 @@ createApp({
         },
         totalExpense() { 
             return this.processedLogs.reduce((sum, i) => sum + Number(i.金額 || 0), 0); 
+        },
+        // 燈箱圖片動態樣式
+        zoomStyle() {
+            return {
+                transform: `translate(${this.offsetX}px, ${this.offsetY}px) scale(${this.zoomScale})`,
+                transition: this.isDragging ? 'none' : 'transform 0.15s ease-out'
+            };
         }
     },
     watch: {
         activeTab(newTab) {
             if (newTab === 'chart') {
                 this.$nextTick(() => {
-                    // 等待分頁切換動畫完成後再繪製圖表
                     setTimeout(() => this.renderChart(), 350);
                 });
             }
@@ -65,18 +79,13 @@ createApp({
         }
     },
     methods: {
-        // --- 核心手勢判定：嚴格過濾上下滑動 ---
+        // --- 核心手勢判定：分頁切換 ---
         handleSwipe() {
-            const swipeThreshold = 75; // 水平移動需超過 75px
-            const verticalLimit = 35;  // 垂直位移若超過 35px 則判定為上下捲動，不觸發換頁
-            
+            const swipeThreshold = 75;
+            const verticalLimit = 35;
             const diffX = this.touchStartX - this.touchEndX;
             const diffY = this.touchStartY - this.touchEndY;
 
-            // 判定條件：
-            // 1. 水平移動距離夠長
-            // 2. 垂直移動距離夠短 (確保不是在上下滑明細)
-            // 3. 水平移動必須是垂直移動的 3 倍以上 (斜滑判定)
             if (Math.abs(diffX) > swipeThreshold && 
                 Math.abs(diffY) < verticalLimit && 
                 Math.abs(diffX) > Math.abs(diffY) * 3) {
@@ -85,10 +94,54 @@ createApp({
                 let currentIndex = tabs.indexOf(this.activeTab);
 
                 if (diffX > 0 && currentIndex < tabs.length - 1) {
-                    this.activeTab = tabs[currentIndex + 1]; // 向左滑 -> 下一頁
+                    this.activeTab = tabs[currentIndex + 1];
                 } else if (diffX < 0 && currentIndex > 0) {
-                    this.activeTab = tabs[currentIndex - 1]; // 向右滑 -> 上一頁
+                    this.activeTab = tabs[currentIndex - 1];
                 }
+            }
+        },
+
+        // --- 燈箱圖片：雙指縮放與單指平移 ---
+        handleTouchStartImg(e) {
+            if (e.touches.length === 2) {
+                // 雙指啟動：計算初始距離
+                this.touchStartDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+            } else if (e.touches.length === 1 && this.zoomScale > 1) {
+                // 已放大狀態下的單指平移啟動
+                this.isDragging = true;
+                this.touchStartPoint = {
+                    x: e.touches[0].pageX - this.offsetX,
+                    y: e.touches[0].pageY - this.offsetY
+                };
+            }
+        },
+        handleTouchMoveImg(e) {
+            if (e.touches.length === 2) {
+                // 雙指縮放中
+                const currentDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                const scale = (currentDist / this.touchStartDist) * this.lastScale;
+                this.zoomScale = Math.min(Math.max(scale, 1), 4);
+            } else if (e.touches.length === 1 && this.isDragging) {
+                // 單指平移中
+                this.offsetX = e.touches[0].pageX - this.touchStartPoint.x;
+                this.offsetY = e.touches[0].pageY - this.touchStartPoint.y;
+            }
+        },
+        handleTouchEndImg() {
+            this.isDragging = false;
+            this.lastScale = this.zoomScale;
+            // 縮回原大小時重置位置
+            if (this.zoomScale <= 1.05) {
+                this.zoomScale = 1;
+                this.lastScale = 1;
+                this.offsetX = 0;
+                this.offsetY = 0;
             }
         },
         
@@ -271,12 +324,25 @@ createApp({
             };
             reader.readAsDataURL(file);
         },
-        openLightbox(url) { this.lightboxUrl = url; }
+        openLightbox(url) { 
+            this.lightboxUrl = url;
+            // 開啟時重置縮放座標
+            this.zoomScale = 1;
+            this.lastScale = 1;
+            this.offsetX = 0;
+            this.offsetY = 0;
+        },
+        closeLightbox() {
+            this.lightboxUrl = null;
+            this.zoomScale = 1;
+            this.offsetX = 0;
+            this.offsetY = 0;
+        }
     },
     mounted() {
         this.init();
 
-        // 監聽全局手勢 - 座標記錄
+        // 監聽全局手勢 - 座標記錄（用於分頁切換）
         window.addEventListener('touchstart', (e) => {
             this.touchStartX = e.touches[0].clientX;
             this.touchStartY = e.touches[0].clientY;
@@ -285,10 +351,10 @@ createApp({
         window.addEventListener('touchend', (e) => {
             this.touchEndX = e.changedTouches[0].clientX;
             this.touchEndY = e.changedTouches[0].clientY;
-            this.handleSwipe(); // 執行判定
+            this.handleSwipe();
         }, { passive: true });
 
-        // PWA 自動更新檢查：發現新內容時彈出提示
+        // PWA 自動更新偵測
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistration().then(reg => {
                 if (reg) {
