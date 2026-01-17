@@ -107,7 +107,7 @@ h2 {
     font-size: 11px;
 }
 
-/* --- 4. 導航與浮動按鈕 --- */
+/* --- 4. 導航與浮動按鈕 (已整合 Font Awesome 與層級修正) --- */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -118,43 +118,81 @@ h2 {
     background: var(--white);
     display: flex;
     justify-content: space-around;
-    padding: 10px 0 25px 0; /* 底部預留安全距離 */
+    align-items: center; /* 垂直置中 */
+    /* 底部預留安全距離並考慮 iPhone 底部橫條 */
+    padding: 10px 0 calc(15px + env(safe-area-inset-bottom)); 
     border-radius: 25px 25px 0 0;
     box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
-    z-index: 100;
+    z-index: 1000; /* 提升層級 */
+    border-top: 1px solid #f0f0f0;
 }
 
 .nav-item {
     text-align: center;
-    font-size: 12px;
-    color: #ccc;
+    color: #ccc; /* 預設灰色 */
     cursor: pointer;
     flex: 1;
+    transition: all 0.3s ease;
+}
+
+/* 圖示專屬樣式 */
+.nav-item i {
+    font-size: 22px; /* Font Awesome 圖示大小 */
+    margin-bottom: 4px;
+    display: block;
 }
 
 .nav-item div {
-    margin-top: 4px;
+    font-size: 12px;
+    font-weight: bold;
 }
 
+/* 選中狀態：顏色變亮 */
 .nav-item.active {
     color: var(--primary);
 }
 
-.fab {
+.nav-item.active i {
+    transform: translateY(-3px); /* 選中時微調上浮 */
+}
+
+/* 修改名稱為 .add-btn 避免與 Font Awesome 衝突 */
+.add-btn {
     position: fixed;
-    right: 20px;
-    bottom: 95px;
+    right: 25px;
+    bottom: calc(100px + env(safe-area-inset-bottom)); 
     width: 60px;
     height: 60px;
     background: var(--primary);
     border-radius: 50%;
+    
+    /* 核心置中設定 */
     display: flex;
     align-items: center;
     justify-content: center;
+    
     color: white;
-    font-size: 30px;
-    box-shadow: 0 4px 12px rgba(255, 183, 178, 0.5);
-    z-index: 99;
+    border: none; 
+    box-shadow: 0 6px 16px rgba(255, 183, 178, 0.6);
+    z-index: 999;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+/* 圖示本身的大小與對齊 */
+.add-btn i {
+    font-size: 24px;
+    /* 確保圖示不繼承任何怪異的行高或字體 */
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 900;
+}
+
+/* 點擊縮放效果 */
+.add-btn:active {
+    transform: scale(0.9);
 }
 
 /* --- 5. 彈窗與輸入框 --- */
