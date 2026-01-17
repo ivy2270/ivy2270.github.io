@@ -201,9 +201,12 @@ h2 {
     top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.5);
     display: flex;
-    align-items: center;
+    align-items: center; /* 垂直置中 */
     justify-content: center;
-    z-index: 1000;
+    /* 確保 z-index 高於 bottom-nav (1000) */
+    z-index: 2000; 
+    /* 稍微往上偏移一點點，讓視覺重心避開底欄 */
+    padding-bottom: 60px; 
 }
 
 .modal-content {
@@ -212,8 +215,16 @@ h2 {
     max-width: 400px;
     border-radius: 25px;
     padding: 20px;
-    max-height: 85vh;
+    
+    /* 增加底部 Padding，確保取消按鈕下方有呼吸空間 */
+    padding-bottom: 35px; 
+    
+    /* 修正最大高度，預留更多空間給底部的導覽列與 FAB */
+    max-height: 80vh; 
     overflow-y: auto;
+    
+    /* 確保在彈窗出現時，陰影不會被切掉 */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
 input, select, textarea {
@@ -238,7 +249,12 @@ input, select, textarea {
 }
 
 .btn-danger { background: var(--danger); margin-top: 10px; }
-.btn-cancel { background: #ccc; margin-top: 5px; }
+/* 針對彈窗內最後一個按鈕（取消按鈕）增加下邊距，雙重保險 */
+.btn-cancel {
+    background: #ccc;
+    margin-top: 5px;
+    margin-bottom: 10px; 
+}
 
 /* 分類網格 */
 .category-grid {
