@@ -11,13 +11,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
     <link rel="preload" href="https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf" as="font" type="font/ttf" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body>
     <div id="app" class="container" v-cloak>   
     
-        <h2 style="text-align: center; color: var(--primary); margin: 20px 0;">🎀 {{ currentTabTitle }}<span style="font-size: 10px; opacity: 0.3;">v2.0</span></h2>
+        <h2 style="text-align: center; color: var(--primary); margin: 20px 0;">🎀 {{ currentTabTitle }}</h2>
 
         <transition name="tab-content-fade" mode="out-in">
             <div :key="activeTab">
@@ -132,7 +133,9 @@
             </div>
         </div>
 
-        <div class="fab" @click="openAddModal">＋</div>
+        <div class="add-btn" @click="openAddModal">
+    <i class="fa-solid fa-plus"></i>
+</div>
         <div v-if="lightboxUrl" class="lightbox" @click.self="closeLightbox">
     <img :src="lightboxUrl" 
          :style="zoomStyle"
@@ -150,11 +153,20 @@
             </div>
         </transition>
 
-        <nav class="bottom-nav">
-            <div class="nav-item" :class="{active: activeTab==='list'}" @click="activeTab='list'">📋<div>明細</div></div>
-            <div class="nav-item" :class="{active: activeTab==='chart'}" @click="activeTab='chart'">📊<div>統計</div></div>
-            <div class="nav-item" :class="{active: activeTab==='settings'}" @click="activeTab='settings'">⚙️<div>設定</div></div>
-        </nav>
+<nav class="bottom-nav">
+    <div class="nav-item" :class="{active: activeTab==='list'}" @click="activeTab='list'">
+        <i class="fa-solid fa-rectangle-list"></i>
+        <div>明細</div>
+    </div>
+    <div class="nav-item" :class="{active: activeTab==='chart'}" @click="activeTab='chart'">
+        <i class="fa-solid fa-chart-pie"></i>
+        <div>統計</div>
+    </div>
+    <div class="nav-item" :class="{active: activeTab==='settings'}" @click="activeTab='settings'">
+        <i class="fa-solid fa-gear"></i>
+        <div>設定</div>
+    </div>
+</nav>
     </div>
 
     <script src="script.js"></script>
