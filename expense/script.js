@@ -20,8 +20,11 @@ createApp({
                 note: '', imageData: '', imageUrl: null, deleteImage: false 
             },
             filter: { start: '', end: '' },
+            // 座標記錄
             touchStartX: 0,
-            touchEndX: 0
+            touchEndX: 0,
+            touchStartY: 0,
+            touchEndY: 0
         }
     },
     computed: {
@@ -47,10 +50,9 @@ createApp({
     },
     watch: {
         activeTab(newTab) {
-            // 如果切換到圖表，且沒有動畫（例如手動點擊導覽列），則直接畫
             if (newTab === 'chart') {
                 this.$nextTick(() => {
-                    setTimeout(() => this.renderChart(), 350); // 略微延遲，等待 transition 動畫完成
+                    setTimeout(() => this.renderChart(), 350);
                 });
             }
         },
@@ -62,39 +64,25 @@ createApp({
         }
     },
     methods: {
-// --- 強化版手勢切換 (加入垂直過濾) ---
-handleTouchStart(e) {
-    this.touchStartX = e.touches[0].clientX;
-    this.touchStartY = e.touches[0].clientY; // 記錄起始 Y 座標
-},
-handleTouchEnd(e) {
-    this.touchEndX = e.changedTouches[0].clientX;
-    this.touchEndY = e.changedTouches[0].clientY; // 記錄結束 Y 座標
-    this.handleSwipe();
-},
-handleSwipe() {
-    const swipeThreshold = 80; // 水平門檻調高（原本可能是 40-50）
-    const verticalThreshold = 50; // 垂直位移容許值
+        // --- 強化版手勢切換 ---
+        handleSwipe() {
+            const swipeThreshold = 70; // 水平移動至少 70px
+            const diffX = this.touchStartX - this.touchEndX;
+            const diffY = this.touchStartY - this.touchEndY;
 
-    const diffX = this.touchStartX - this.touchEndX;
-    const diffY = this.touchStartY - this.touchEndY;
+            // 核心判定：水平移動必須明顯大於垂直移動 (判定為橫滑而非斜滑或捲動)
+            // 我們使用兩倍比率，讓判定更嚴格
+            if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+                const tabs = ['list', 'chart', 'settings'];
+                let currentIndex = tabs.indexOf(this.activeTab);
 
-    // --- 核心判定邏輯 ---
-    // 1. 水平滑動距離必須大於門檻
-    // 2. 水平滑動距離必須「大於」垂直滑動距離（確保不是在上下滑）
-    if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > Math.abs(diffY)) {
-        const tabs = ['list', 'chart', 'settings'];
-        let currentIndex = tabs.indexOf(this.activeTab);
-
-        if (diffX > 0 && currentIndex < tabs.length - 1) {
-            // 向左滑 -> 下一頁
-            this.activeTab = tabs[currentIndex + 1];
-        } else if (diffX < 0 && currentIndex > 0) {
-            // 向右滑 -> 上一頁
-            this.activeTab = tabs[currentIndex - 1];
-        }
-    }
-}
+                if (diffX > 0 && currentIndex < tabs.length - 1) {
+                    this.activeTab = tabs[currentIndex + 1];
+                } else if (diffX < 0 && currentIndex > 0) {
+                    this.activeTab = tabs[currentIndex - 1];
+                }
+            }
+        },
         showToast(msg) {
             this.toastMsg = msg;
             setTimeout(() => { this.toastMsg = null; }, 2000);
@@ -107,7 +95,6 @@ handleSwipe() {
             const d = new Date(dateVal);
             return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
         },
-        // --- 初始化與資料讀取 ---
         async init() {
             const cacheCats = localStorage.getItem('cache_categories');
             const cachePayments = localStorage.getItem('cache_payments');
@@ -142,7 +129,6 @@ handleSwipe() {
             this.logs = data;
             localStorage.setItem('cache_logs', JSON.stringify(data));
         },
-        // --- 彈窗與表單 ---
         selectMain(mainName) {
             this.selectedMain = mainName;
             this.form.mainCategory = mainName;
@@ -175,7 +161,6 @@ handleSwipe() {
         },
         closeModal() { this.showAddModal = false; this.resetForm(); },
         removeImage() { this.form.imageData = ''; this.form.imageUrl = null; this.form.deleteImage = true; },
-        // --- 資料同步 ---
         async submitAdd() {
             if (!this.form.item || !this.form.amount || !this.form.subCategory) return this.showToast("⚠️ 請填寫品項、金額與分類");
             this.loading = true;
@@ -214,7 +199,6 @@ handleSwipe() {
             if (targetIndex < 0 || targetIndex >= arr.length) return;
             const temp = arr[index]; arr.splice(index, 1); arr.splice(targetIndex, 0, temp);
         },
-        // --- 圖表繪製 ---
         renderChart() {
             const ctx = document.getElementById('myChart');
             if (!ctx) return;
@@ -243,7 +227,6 @@ handleSwipe() {
                 }
             });
         },
-        // --- 圖片處理 ---
         handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -268,17 +251,19 @@ handleSwipe() {
         },
         openLightbox(url) { this.lightboxUrl = url; }
     },
-mounted() {
-    this.init();
+    mounted() {
+        this.init();
 
-    // 強力監聽：直接綁定到視窗，確保不被內容擋住
-    window.addEventListener('touchstart', (e) => {
-        this.touchStartX = e.touches[0].clientX;
-    }, { passive: true });
+        // 核心修正：同時監聽 X 與 Y
+        window.addEventListener('touchstart', (e) => {
+            this.touchStartX = e.touches[0].clientX;
+            this.touchStartY = e.touches[0].clientY;
+        }, { passive: true });
 
-    window.addEventListener('touchend', (e) => {
-        this.touchEndX = e.changedTouches[0].clientX;
-        this.handleSwipe();
-    }, { passive: true });
-}
+        window.addEventListener('touchend', (e) => {
+            this.touchEndX = e.changedTouches[0].clientX;
+            this.touchEndY = e.changedTouches[0].clientY;
+            this.handleSwipe();
+        }, { passive: true });
+    }
 }).mount('#app');
