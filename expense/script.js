@@ -62,35 +62,39 @@ createApp({
         }
     },
     methods: {
-// --- 強化版手勢切換 ---
+// --- 強化版手勢切換 (加入垂直過濾) ---
 handleTouchStart(e) {
-    // 使用 clientX 確保在模擬器與實機都能精準抓到座標
     this.touchStartX = e.touches[0].clientX;
+    this.touchStartY = e.touches[0].clientY; // 記錄起始 Y 座標
 },
 handleTouchEnd(e) {
     this.touchEndX = e.changedTouches[0].clientX;
+    this.touchEndY = e.changedTouches[0].clientY; // 記錄結束 Y 座標
     this.handleSwipe();
 },
 handleSwipe() {
-    const swipeThreshold = 40; // 降低門檻，更好觸發
-    const tabs = ['list', 'chart', 'settings'];
-    let currentIndex = tabs.indexOf(this.activeTab);
+    const swipeThreshold = 80; // 水平門檻調高（原本可能是 40-50）
+    const verticalThreshold = 50; // 垂直位移容許值
 
-    const diff = this.touchStartX - this.touchEndX;
+    const diffX = this.touchStartX - this.touchEndX;
+    const diffY = this.touchStartY - this.touchEndY;
 
-    // 加上 console.log 方便你在電腦 F12 的 Console 視窗看到滑動數值
-    console.log("滑動距離:", diff); 
+    // --- 核心判定邏輯 ---
+    // 1. 水平滑動距離必須大於門檻
+    // 2. 水平滑動距離必須「大於」垂直滑動距離（確保不是在上下滑）
+    if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > Math.abs(diffY)) {
+        const tabs = ['list', 'chart', 'settings'];
+        let currentIndex = tabs.indexOf(this.activeTab);
 
-    if (Math.abs(diff) > swipeThreshold) {
-        if (diff > 0 && currentIndex < tabs.length - 1) {
-            // 指標往左滑 (diff 為正) -> 下一個分頁
+        if (diffX > 0 && currentIndex < tabs.length - 1) {
+            // 向左滑 -> 下一頁
             this.activeTab = tabs[currentIndex + 1];
-        } else if (diff < 0 && currentIndex > 0) {
-            // 指標往右滑 (diff 為負) -> 上一個分頁
+        } else if (diffX < 0 && currentIndex > 0) {
+            // 向右滑 -> 上一頁
             this.activeTab = tabs[currentIndex - 1];
         }
     }
-},
+}
         showToast(msg) {
             this.toastMsg = msg;
             setTimeout(() => { this.toastMsg = null; }, 2000);
