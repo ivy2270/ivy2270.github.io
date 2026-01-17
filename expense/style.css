@@ -308,12 +308,54 @@ input, select, textarea {
 
 /* --- 8. 其他功能樣式 --- */
 .lightbox {
-    position: fixed; top:0; left:0; width:100%; height:100%;
-    background: rgba(0,0,0,0.9); z-index: 2000;
-    display: flex; align-items: center; justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95); /* 深一點顏色更有沉浸感 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    overflow: hidden; 
+    touch-action: none; /* 禁用瀏覽器默認行為 */
 }
 
-.lightbox img { max-width: 90%; max-height: 80%; border-radius: 10px; border: 3px solid white; }
+.lightbox img {
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    will-change: transform;
+    transition: transform 0.05s linear; /* 極短的延遲讓跟隨感更平滑 */
+}
+
+/* 關閉按鈕：固定在螢幕右上角 */
+.close-btn {
+    position: absolute;
+    top: 25px;      /* 距離頂部 25px */
+    right: 25px;    /* 距離右側 25px */
+    width: 44px;    /* 增加觸控面積，適合手機操作 */
+    height: 44px;
+    background: rgba(255, 255, 255, 0.2); /* 半透明背景 */
+    border: none;
+    border-radius: 50%; /* 圓形按鈕 */
+    color: white;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10001; /* 確保在圖片之上 */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    backdrop-filter: blur(5px); /* 毛玻璃效果，更有質感 */
+}
+
+/* 點擊按鈕時的反饋 */
+.close-btn:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.4);
+}
 
 .btn-del-img {
     position: absolute;
