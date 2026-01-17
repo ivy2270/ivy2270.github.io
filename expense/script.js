@@ -72,7 +72,7 @@ createApp({
 
             // 核心判定：水平移動必須明顯大於垂直移動 (判定為橫滑而非斜滑或捲動)
             // 我們使用兩倍比率，讓判定更嚴格
-            if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+            if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > Math.abs(diffY) * 3) {
                 const tabs = ['list', 'chart', 'settings'];
                 let currentIndex = tabs.indexOf(this.activeTab);
 
@@ -267,3 +267,4 @@ createApp({
         }, { passive: true });
     }
 }).mount('#app');
+
