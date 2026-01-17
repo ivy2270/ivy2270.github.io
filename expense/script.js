@@ -20,7 +20,7 @@ createApp({
                 note: '', imageData: '', imageUrl: null, deleteImage: false 
             },
             filter: { start: '', end: '' },
-            // 座標記錄
+            // 手勢座標記錄
             touchStartX: 0,
             touchEndX: 0,
             touchStartY: 0,
@@ -52,6 +52,7 @@ createApp({
         activeTab(newTab) {
             if (newTab === 'chart') {
                 this.$nextTick(() => {
+                    // 等待分頁切換動畫完成後再繪製圖表
                     setTimeout(() => this.renderChart(), 350);
                 });
             }
@@ -64,25 +65,34 @@ createApp({
         }
     },
     methods: {
-        // --- 強化版手勢切換 ---
+        // --- 核心手勢判定：嚴格過濾上下滑動 ---
         handleSwipe() {
-            const swipeThreshold = 70; // 水平移動至少 70px
+            const swipeThreshold = 75; // 水平移動需超過 75px
+            const verticalLimit = 35;  // 垂直位移若超過 35px 則判定為上下捲動，不觸發換頁
+            
             const diffX = this.touchStartX - this.touchEndX;
             const diffY = this.touchStartY - this.touchEndY;
 
-            // 核心判定：水平移動必須明顯大於垂直移動 (判定為橫滑而非斜滑或捲動)
-            // 我們使用兩倍比率，讓判定更嚴格
-            if (Math.abs(diffX) > swipeThreshold && Math.abs(diffX) > Math.abs(diffY) * 3) {
+            // 判定條件：
+            // 1. 水平移動距離夠長
+            // 2. 垂直移動距離夠短 (確保不是在上下滑明細)
+            // 3. 水平移動必須是垂直移動的 3 倍以上 (斜滑判定)
+            if (Math.abs(diffX) > swipeThreshold && 
+                Math.abs(diffY) < verticalLimit && 
+                Math.abs(diffX) > Math.abs(diffY) * 3) {
+                
                 const tabs = ['list', 'chart', 'settings'];
                 let currentIndex = tabs.indexOf(this.activeTab);
 
                 if (diffX > 0 && currentIndex < tabs.length - 1) {
-                    this.activeTab = tabs[currentIndex + 1];
+                    this.activeTab = tabs[currentIndex + 1]; // 向左滑 -> 下一頁
                 } else if (diffX < 0 && currentIndex > 0) {
-                    this.activeTab = tabs[currentIndex - 1];
+                    this.activeTab = tabs[currentIndex - 1]; // 向右滑 -> 上一頁
                 }
             }
         },
+        
+        // --- 基礎工具 ---
         showToast(msg) {
             this.toastMsg = msg;
             setTimeout(() => { this.toastMsg = null; }, 2000);
@@ -95,6 +105,8 @@ createApp({
             const d = new Date(dateVal);
             return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
         },
+
+        // --- 資料讀取與初始化 ---
         async init() {
             const cacheCats = localStorage.getItem('cache_categories');
             const cachePayments = localStorage.getItem('cache_payments');
@@ -102,9 +114,11 @@ createApp({
             if (cacheCats) this.categoryData = JSON.parse(cacheCats);
             if (cachePayments) this.payments = JSON.parse(cachePayments);
             if (cacheLogs) this.logs = JSON.parse(cacheLogs); 
+            
             const now = new Date();
             this.filter.start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
             this.filter.end = this.formatToISODate(now);
+            
             this.loading = true;
             try {
                 const res = await fetch(`${GAS_URL}?action=init`);
@@ -129,6 +143,8 @@ createApp({
             this.logs = data;
             localStorage.setItem('cache_logs', JSON.stringify(data));
         },
+
+        // --- 表單邏輯 ---
         selectMain(mainName) {
             this.selectedMain = mainName;
             this.form.mainCategory = mainName;
@@ -161,23 +177,25 @@ createApp({
         },
         closeModal() { this.showAddModal = false; this.resetForm(); },
         removeImage() { this.form.imageData = ''; this.form.imageUrl = null; this.form.deleteImage = true; },
+
+        // --- 資料連線 ---
         async submitAdd() {
-            if (!this.form.item || !this.form.amount || !this.form.subCategory) return this.showToast("⚠️ 請填寫品項、金額與分類");
+            if (!this.form.item || !this.form.amount || !this.form.subCategory) return this.showToast("⚠️ 填寫品項、金額與分類");
             this.loading = true;
             const action = this.form.id ? 'update' : 'add';
             try {
                 await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action, ...this.form }) });
-                this.showToast(this.form.id ? "✅ 已更新明細" : "✅ 已新增明細");
+                this.showToast(this.form.id ? "✅ 已更新" : "✅ 已新增");
                 this.showAddModal = false;
                 await this.fetchLogs();
             } catch (e) { this.showToast("❌ 連線失敗"); } finally { this.loading = false; }
         },
         async deleteLog(id) {
-            if (!confirm("確定要刪除這筆支出嗎？")) return;
+            if (!confirm("確定要刪除嗎？")) return;
             this.loading = true;
             try {
                 await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id }) });
-                this.showToast("🗑️ 已刪除資料");
+                this.showToast("🗑️ 已刪除");
                 this.showAddModal = false;
                 await this.fetchLogs();
             } catch (e) { this.showToast("❌ 刪除失敗"); } finally { this.loading = false; }
@@ -199,6 +217,8 @@ createApp({
             if (targetIndex < 0 || targetIndex >= arr.length) return;
             const temp = arr[index]; arr.splice(index, 1); arr.splice(targetIndex, 0, temp);
         },
+
+        // --- 圖表繪製 ---
         renderChart() {
             const ctx = document.getElementById('myChart');
             if (!ctx) return;
@@ -227,6 +247,8 @@ createApp({
                 }
             });
         },
+
+        // --- 圖片處理 ---
         handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -254,7 +276,7 @@ createApp({
     mounted() {
         this.init();
 
-        // 核心修正：同時監聽 X 與 Y
+        // 監聽全局手勢 - 座標記錄
         window.addEventListener('touchstart', (e) => {
             this.touchStartX = e.touches[0].clientX;
             this.touchStartY = e.touches[0].clientY;
@@ -263,8 +285,24 @@ createApp({
         window.addEventListener('touchend', (e) => {
             this.touchEndX = e.changedTouches[0].clientX;
             this.touchEndY = e.changedTouches[0].clientY;
-            this.handleSwipe();
+            this.handleSwipe(); // 執行判定
         }, { passive: true });
+
+        // PWA 自動更新檢查：發現新內容時彈出提示
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistration().then(reg => {
+                if (reg) {
+                    reg.onupdatefound = () => {
+                        const installingWorker = reg.installing;
+                        installingWorker.onstatechange = () => {
+                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                alert("發現新版本！請點擊確定以更新。");
+                                location.reload(true);
+                            }
+                        };
+                    };
+                }
+            });
+        }
     }
 }).mount('#app');
-
