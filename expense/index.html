@@ -83,7 +83,7 @@
                     <button @click="payments.splice(index, 1)" class="btn-del-circle">✕</button>
                 </div>
                 <button @click="payments.push('')" class="btn-small">+ 新增付款方式</button>
-                <button class="btn" @click="submitAdd" :disabled="loading">
+                <button class="btn" @click="saveSettings" :disabled="loading">
     <span v-if="loading" class="loading-spinner"></span>
     {{ loading ? '同步中...' : '確定儲存' }}
 </button>
@@ -152,6 +152,5 @@
             });
         }
     </script>
-</body>
 </body>
 </html>
