@@ -19,7 +19,7 @@
          @touchstart="handleTouchStart" 
          @touchend="handleTouchEnd">   
     
-        <h2 style="text-align: center; color: var(--primary); margin: 20px 0;">🎀 {{ currentTabTitle }}</h2>
+        <h2 style="text-align: center; color: var(--primary); margin: 20px 0;">🎀 {{ currentTabTitle }}<span style="font-size: 10px; opacity: 0.3;">v1.0.5</span></h2>
 
         <transition name="tab-content-fade" mode="out-in">
             <div :key="activeTab">
