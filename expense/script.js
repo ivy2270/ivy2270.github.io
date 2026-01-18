@@ -1,5 +1,56 @@
 const { createApp } = Vue;
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzttIuCcfW6dapMYYwQ8m5Ve7C_NoMF4jLV5VkSITrwKkFD_kW8aekL5WKXLH9tgILnqw/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyU47_P83rasDWhTeMfGUcAT6Bzkei3q4bRqY00tIkSTtpzoHryiV5wcK_0KNnoFYJ4qQ/exec';
+
+// ==========================================
+// 【新加入：動態 Manifest 處理】
+// ==========================================
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const key = params.get('key');
+    const appId = "my-money-log-pwa"; // 記帳 App 專屬 ID
+    
+    let manifestData = {
+        "id": appId, 
+        "name": "微時記帳",
+        "short_name": "微時記帳",
+        "start_url": "index.html", 
+        "display": "standalone",
+        "background_color": "#fff9f9",
+        "theme_color": "#ffb7b2",
+        "icons": [{
+            "src": "money-bag-money-svgrepo-com.svg",
+            "sizes": "192x192",
+            "type": "image/svg+xml"
+        }]
+    };
+
+    if (key && key.trim() !== "") {
+        manifestData.name = "微時記帳 (管理版)";
+        manifestData.start_url = "index.html?key=" + key; 
+    }
+
+    const stringManifest = JSON.stringify(manifestData);
+    const blob = new Blob([stringManifest], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    
+    const linkEl = document.getElementById('manifest-link');
+    if (linkEl) {
+        linkEl.setAttribute('href', manifestURL);
+    }
+})();
+
+// ==========================================
+// 【新加入：嚴格金鑰判定】
+// ==========================================
+const USER_KEY = (function() {
+    const key = new URLSearchParams(window.location.search).get('key');
+    return (key && key.trim() !== "") ? key : null;
+})();
+
+// 介面鎖定：如果是訪客，則隱藏新增按鈕
+if (USER_KEY) {
+    document.body.classList.add('admin-mode');
+}
 
 createApp({
     data() {
@@ -232,38 +283,76 @@ createApp({
         removeImage() { this.form.imageData = ''; this.form.imageUrl = null; this.form.deleteImage = true; },
 
         // --- 資料連線 ---
-        async submitAdd() {
+async submitAdd() {
             if (!this.form.item || !this.form.amount || !this.form.subCategory) return this.showToast("⚠️ 填寫品項、金額與分類");
             this.loading = true;
             const action = this.form.id ? 'update' : 'add';
             try {
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action, ...this.form }) });
+                const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action, key: USER_KEY, ...this.form }) });
+                const result = await response.json();
+                
+                // 檢查 GAS 回傳的錯誤
+                if (result.status === 'error') {
+                    this.showToast(result.message); 
+                    return;
+                }
+
                 this.showToast(this.form.id ? "✅ 已更新" : "✅ 已新增");
                 this.showAddModal = false;
                 await this.fetchLogs();
-            } catch (e) { this.showToast("❌ 連線失敗"); } finally { this.loading = false; }
+            } catch (e) { 
+                this.showToast("❌ 連線失敗"); 
+            } finally { 
+                this.loading = false; 
+            }
         },
+
         async deleteLog(id) {
             if (!confirm("確定要刪除嗎？")) return;
             this.loading = true;
             try {
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id }) });
+                const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', key: USER_KEY, id }) });
+                const result = await response.json();
+
+                if (result.status === 'error') {
+                    this.showToast(result.message);
+                    return;
+                }
+
                 this.showToast("🗑️ 已刪除");
                 this.showAddModal = false;
                 await this.fetchLogs();
-            } catch (e) { this.showToast("❌ 刪除失敗"); } finally { this.loading = false; }
+            } catch (e) { 
+                this.showToast("❌ 刪除失敗"); 
+            } finally { 
+                this.loading = false; 
+            }
         },
+
         async saveSettings() {
             this.loading = true;
             try {
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePayments', data: this.payments.filter(p => p) }) });
+                // 更新付款方式
+                const res1 = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updatePayments', key: USER_KEY, data: this.payments.filter(p => p) }) });
+                const result1 = await res1.json();
+                if (result1.status === 'error') return this.showToast(result1.message);
+
                 const catData = this.categoryData.map(c => ({
                     main: c.main, subs: c.subRaw.split(',').map(s => s.trim()).filter(s => s)
                 }));
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateCategories', data: catData }) });
+
+                // 更新分類
+                const res2 = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateCategories', key: USER_KEY, data: catData }) });
+                const result2 = await res2.json();
+                if (result2.status === 'error') return this.showToast(result2.message);
+
                 this.showToast("✨ 設定已儲存");
                 await this.init(); 
-            } catch (e) { this.showToast("❌ 儲存失敗"); } finally { this.loading = false; }
+            } catch (e) { 
+                this.showToast("❌ 儲存失敗"); 
+            } finally { 
+                this.loading = false; 
+            }
         },
         moveItem(arr, index, step) {
             const targetIndex = index + step;
