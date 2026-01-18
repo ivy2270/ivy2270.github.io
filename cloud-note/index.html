@@ -132,13 +132,28 @@
     
     #loader { text-align: center; padding: 20px; color: var(--accent-color); font-weight: bold; }
 	
+	/* 預設隱藏管理區域 */
+.admin-only {
+    display: none !important;
+}
+
+/* 當 body 有 admin-mode 類別時，才顯示 */
+body.admin-mode .admin-only {
+    display: block !important;
+}
+
+/* 針對按鈕的特殊處理（因為按鈕通常是 inline-block） */
+body.admin-mode button.admin-only {
+    display: inline-block !important;
+}
+	
   </style>
 </head>
 <body>
   <div id="app-container">
     <h1>🍀 雲端記事本 🍀</h1>
     
-    <div class="input-area">
+    <div class="input-area admin-only">
       <textarea id="note-input" placeholder="在這裡寫下新的想法..."></textarea>
       <button id="add-btn">新增筆記</button>
     </div>
@@ -148,9 +163,22 @@
     <div id="loader" style="display:none;">同步中...</div>
     <div id="notes-container"></div>
   </div>
-  <script>
-    // ★ 請填入您的 GAS Web App URL ★
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycby--Mh49PC5MuylDq7NS60RBWrFnXjXDy0MVeE6m6iRlAxdAL3DFlKpDkvf171flfIM/exec';
+  
+<script>
+    // ★ 基礎設定 ★
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-TLMSRHh_nF2JdlYI28BrhgS0Yu9xqvhEG7yC7IS1ivfxhoer6xOkC44wptJMqCupPg/exec';
+
+    // --- 方法 A：盲傳邏輯 ---
+    // 1. 只負責從網址抓取參數，程式碼內「不包含」正確密碼
+    const urlParams = new URLSearchParams(window.location.search);
+    const USER_KEY = urlParams.get('key'); 
+
+    // 2. 只要網址有 key 這個參數（不管對錯），就先嘗試開啟介面
+    // 真正的權限守門員在 GAS 端，如果 key 錯了，按下按鈕也會報錯
+    if (USER_KEY) {
+        document.body.classList.add('admin-mode');
+    }
+    // ----------------------
 
     const noteInput = document.getElementById('note-input');
     const addBtn = document.getElementById('add-btn');
@@ -165,14 +193,26 @@
       fetchNotesFromServer();
     });
 
+    // API 請求：自動打包網址抓到的 key 傳給後端
     async function callApi(action, data = {}) {
-      const payload = { action, ...data };
+      const payload = { 
+        action: action, 
+        key: USER_KEY, // 這裡就是搬運工，直接把網址參數塞進去
+        ...data 
+      }; 
       try {
         const response = await fetch(WEB_APP_URL, {
           method: 'POST',
           body: JSON.stringify(payload)
         });
-        return await response.json();
+        const result = await response.json();
+        
+        // 如果 GAS 回傳錯誤（例如密碼不對），在這裡統一攔截
+        if (result.status === 'error' && result.message.includes("權限")) {
+            alert("⚠️ 操作失敗：鈅匙無效，請檢查網址參數。");
+            throw new Error("Unauthorized");
+        }
+        return result;
       } catch (err) {
         console.error('API Error:', err);
         throw err;
@@ -225,9 +265,9 @@
           <div class="note-meta">
             <span>${dateStr}</span>
             <div class="note-actions">
-              <button class="edit-btn">編輯</button>
+              <button class="edit-btn admin-only">編輯</button>
               <button class="copy-btn">複製</button>
-              <button class="delete-btn">刪除</button>
+              <button class="delete-btn admin-only">刪除</button>
             </div>
           </div>
         `;
@@ -235,7 +275,6 @@
       });
     }
 
-    // 事件委派：統一處理卡片按鈕 (回歸原版邏輯)
     notesContainer.addEventListener('click', (e) => {
       const target = e.target;
       const card = target.closest('.note-card');
@@ -266,6 +305,8 @@
           noteInput.value = '';
           renderNotes();
         }
+      } catch(e) {
+        // 錯誤已在 callApi 處理
       } finally {
         addBtn.disabled = false;
         addBtn.innerText = '新增筆記';
@@ -274,7 +315,6 @@
 
     function switchToEditMode(card, button) {
       const contentDiv = card.querySelector('.note-content');
-      // 取得原始純文字（不含 <a> 標籤）
       const note = allNotes.find(n => n.id === card.dataset.id);
       contentDiv.innerHTML = `<textarea class="edit-textarea">${note.content}</textarea>`;
       contentDiv.querySelector('textarea').focus();
@@ -286,16 +326,16 @@
       const newContent = card.querySelector('.edit-textarea').value;
       button.disabled = true;
       button.textContent = '儲存中...';
-
       try {
-        await callApi('editNote', { id, content: newContent });
-        const note = allNotes.find(n => n.id === id);
-        note.content = newContent;
-        note.timestamp = new Date().toISOString();
-        localStorage.setItem('my_notes_cache', JSON.stringify(allNotes));
-        renderNotes(); // 重新渲染以套用 linkify
+        const res = await callApi('editNote', { id, content: newContent });
+        if (res.status === 'success') {
+          const note = allNotes.find(n => n.id === id);
+          note.content = newContent;
+          note.timestamp = new Date().toISOString();
+          localStorage.setItem('my_notes_cache', JSON.stringify(allNotes));
+          renderNotes();
+        }
       } catch(e) {
-        alert('儲存失敗');
         button.disabled = false;
         button.textContent = '儲存';
       }
@@ -304,11 +344,10 @@
     function copyNote(card, button) {
       const note = allNotes.find(n => n.id === card.dataset.id);
       navigator.clipboard.writeText(note.content).then(() => {
-        const originalText = '複製';
         button.textContent = '已複製!';
         button.style.backgroundColor = '#72824e';
         setTimeout(() => {
-          button.textContent = originalText;
+          button.textContent = '複製';
           button.style.backgroundColor = '';
         }, 2000);
       });
@@ -318,12 +357,13 @@
       if (confirm('確定要刪除這則筆記嗎？此操作無法復原。')) {
         card.style.opacity = '0.5';
         try {
-          await callApi('deleteNote', { id });
-          allNotes = allNotes.filter(n => n.id !== id);
-          localStorage.setItem('my_notes_cache', JSON.stringify(allNotes));
-          card.remove();
+          const res = await callApi('deleteNote', { id });
+          if (res.status === 'success') {
+            allNotes = allNotes.filter(n => n.id !== id);
+            localStorage.setItem('my_notes_cache', JSON.stringify(allNotes));
+            card.remove();
+          }
         } catch(e) {
-          alert('刪除失敗');
           card.style.opacity = '1';
         }
       }
