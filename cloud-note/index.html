@@ -165,20 +165,38 @@ body.admin-mode button.admin-only {
   </div>
   
 <script>
-    // ★ 基礎設定 ★
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-TLMSRHh_nF2JdlYI28BrhgS0Yu9xqvhEG7yC7IS1ivfxhoer6xOkC44wptJMqCupPg/exec';
+// ★ 基礎設定 ★
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-TLMSRHh_nF2JdlYI28BrhgS0Yu9xqvhEG7yC7IS1ivfxhoer6xOkC44wptJMqCupPg/exec';
 
-    // --- 方法 A：盲傳邏輯 ---
-    // 1. 只負責從網址抓取參數，程式碼內「不包含」正確密碼
+// --- 升級版：具備記憶功能的金鑰邏輯 ---
+function getInitialKey() {
     const urlParams = new URLSearchParams(window.location.search);
-    const USER_KEY = urlParams.get('key'); 
+    const keyFromUrl = urlParams.get('key');
 
-    // 2. 只要網址有 key 這個參數（不管對錯），就先嘗試開啟介面
-    // 真正的權限守門員在 GAS 端，如果 key 錯了，按下按鈕也會報錯
-    if (USER_KEY) {
-        document.body.classList.add('admin-mode');
+    // 1. 如果網址有 key，就更新到 localStorage 並回傳
+    if (keyFromUrl) {
+        localStorage.setItem('note_access_key', keyFromUrl);
+        return keyFromUrl;
     }
-    // ----------------------
+
+    // 2. 如果網址沒 key，從 localStorage 找找看
+    const savedKey = localStorage.getItem('note_access_key');
+    
+    // 排除無效的字串，確保是真的有存過東西
+    if (savedKey && savedKey !== "null" && savedKey !== "undefined") {
+        return savedKey;
+    }
+
+    return null;
+}
+
+const USER_KEY = getInitialKey();
+
+// 只要 USER_KEY 存在，就開啟管理模式
+if (USER_KEY) {
+    document.body.classList.add('admin-mode');
+}
+// ------------------------------------
 
     const noteInput = document.getElementById('note-input');
     const addBtn = document.getElementById('add-btn');
