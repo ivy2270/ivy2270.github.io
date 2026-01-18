@@ -168,21 +168,27 @@ body.admin-mode button.admin-only {
 // ★ 基礎設定 ★
 const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-TLMSRHh_nF2JdlYI28BrhgS0Yu9xqvhEG7yC7IS1ivfxhoer6xOkC44wptJMqCupPg/exec';
 
-// --- 升級版：具備記憶功能的金鑰邏輯 ---
+// ==========================================
+// 【修正版：支援模式切換的金鑰邏輯】
+// ==========================================
 function getInitialKey() {
     const urlParams = new URLSearchParams(window.location.search);
     const keyFromUrl = urlParams.get('key');
 
-    // 1. 如果網址有 key，就更新到 localStorage 並回傳
-    if (keyFromUrl) {
+    // 1. 如果網址有 key (不管是什麼值)，就以網址為準，並更新快取
+    if (keyFromUrl !== null) {
+        // 如果網址是 ?key= (空的)，代表使用者想進入訪客模式，我們清除快取
+        if (keyFromUrl === "") {
+            localStorage.removeItem('note_access_key');
+            return null;
+        }
+        // 否則，儲存新的 Key
         localStorage.setItem('note_access_key', keyFromUrl);
         return keyFromUrl;
     }
 
-    // 2. 如果網址沒 key，從 localStorage 找找看
+    // 2. 如果網址沒帶 key 參數，才去看 localStorage 之前有沒有存過
     const savedKey = localStorage.getItem('note_access_key');
-    
-    // 排除無效的字串，確保是真的有存過東西
     if (savedKey && savedKey !== "null" && savedKey !== "undefined") {
         return savedKey;
     }
@@ -192,11 +198,13 @@ function getInitialKey() {
 
 const USER_KEY = getInitialKey();
 
-// 只要 USER_KEY 存在，就開啟管理模式
+// 根據最終判斷的 USER_KEY 決定是否開啟管理模式
 if (USER_KEY) {
     document.body.classList.add('admin-mode');
+} else {
+    document.body.classList.remove('admin-mode');
 }
-// ------------------------------------
+// ==========================================
 
     const noteInput = document.getElementById('note-input');
     const addBtn = document.getElementById('add-btn');
