@@ -1,4 +1,4 @@
-const CACHE_NAME = 'note-app-v2-key';
+const CACHE_NAME = 'note-app-v3-key';
 const ASSETS = [
   'index.html',
   'manifest.json',
@@ -19,3 +19,4 @@ self.addEventListener('fetch', (e) => {
   );
 
 });
+
