@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>雲端記事本</title>
   <link rel="icon" type="image/svg+xml" href="note-notepad-svgrepo-com.svg">
-  <link rel="manifest" href="manifest.json">
+<link id="manifest-link" rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#00668c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -169,44 +169,66 @@ body.admin-mode button.admin-only {
 const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-TLMSRHh_nF2JdlYI28BrhgS0Yu9xqvhEG7yC7IS1ivfxhoer6xOkC44wptJMqCupPg/exec';
 
 // ==========================================
-// 【修正版：支援 PWA 自動登入 + 網址乾淨預設訪客】
+// 【3. 動態 Manifest：配合 PWA 鎖定權限】
+// ==========================================
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const key = params.get('key');
+    const appId = "my-cloud-note-pwa"; 
+    
+    let manifestData = {
+        "id": appId, 
+        "name": "雲端記事本",
+        "short_name": "雲端筆記",
+        "start_url": "index.html", 
+        "display": "standalone",
+        "background_color": "#00668c",
+        "theme_color": "#00668c",
+        "icons": [{
+            "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768709528671_note.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        }]
+    };
+
+    if (key && key.trim() !== "") {
+        manifestData.name = "雲端記事本 (管理版)";
+        manifestData.start_url = "index.html?key=" + key; 
+    }
+
+    const stringManifest = JSON.stringify(manifestData);
+    const blob = new Blob([stringManifest], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(blob);
+    
+    const linkEl = document.getElementById('manifest-link');
+    if (linkEl) {
+        linkEl.setAttribute('href', manifestURL);
+    }
+})();
+
+// ==========================================
+// 【2. 嚴格模式：網址沒參數就絕對是訪客】
 // ==========================================
 function getInitialKey() {
     const urlParams = new URLSearchParams(window.location.search);
     const keyFromUrl = urlParams.get('key');
 
-    // 情境 A：網址有帶 key 參數 (例如 ?key=123 或 ?key= )
-    if (keyFromUrl !== null) {
-        if (keyFromUrl.trim() !== "") {
-            // 輸入了金鑰 -> 儲存並進入管理模式
-            localStorage.setItem('note_access_key', keyFromUrl);
-            return keyFromUrl;
-        } else {
-            // 輸入了空的 ?key= -> 代表手動登出，清除快取
-            localStorage.removeItem('note_access_key');
-            return null;
-        }
+    if (keyFromUrl !== null && keyFromUrl.trim() !== "") {
+        return keyFromUrl;
+    } else {
+        return null;
     }
-
-    // 情境 B：網址完全沒帶 key 參數 (一般開啟或 PWA 開啟)
-    // 檢查是否有之前存過的金鑰
-    const savedKey = localStorage.getItem('note_access_key');
-    if (savedKey && savedKey !== "null" && savedKey !== "undefined") {
-        return savedKey;
-    }
-
-    // 沒參數也沒快取 -> 絕對訪客
-    return null;
 }
 
 const USER_KEY = getInitialKey();
 
-// 根據結果切換模式
+// 根據結果決定介面顯示
 if (USER_KEY) {
     document.body.classList.add('admin-mode');
 } else {
     document.body.classList.remove('admin-mode');
 }
+
 // ==========================================
 
     const noteInput = document.getElementById('note-input');
