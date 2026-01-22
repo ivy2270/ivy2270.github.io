@@ -3,197 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>晚宴接待查詢系統</title>
-<link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">
-    <script src="https://unpkg.com/pinyin-pro"></script>
-<style>
-    :root {
-        --primary-color: #1a237e;
-        --accent-color: #bf360c;
-        --bg-color: #f0f2f5;
-    }
-    body {
-        font-family: "Microsoft JhengHei", sans-serif;
-        background-color: var(--bg-color);
-        margin: 0; padding: 10px;
-        display: flex; flex-direction: column; align-items: center;
-    }
-    .container { width: 100%; max-width: 600px; box-sizing: border-box; }
-    h1 { color: var(--primary-color); text-align: center; font-size: 22px; margin: 10px 0; }
+    <title>桌次查詢</title>
+	<link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">
+    <style>
+        /* 採用系統預設字體，省去下載時間 */
+        :root { --p: #1a237e; --bg: #f0f2f5; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 500px; }
+		h1 { color: var(--p); text-align: center; font-size: 22px; margin: 10px 0; }
+        
+        /* 預留高度防止跳動 */
+        .search-container { position: sticky; top: 0; display: flex; gap: 8px; background: var(--bg); padding: 10px 0; width: 100%; }
+        .search-box { flex: 1; min-width: 0; padding: 14px; font-size: 18px; border: 2px solid var(--p); border-radius: 10px; outline: none; }
+        .clear-btn { padding: 0 15px; background: #90a4ae; color: #fff; border: none; border-radius: 10px; font-weight: bold; white-space: nowrap; }
 
-    /* 關鍵優化：防止手機寬度不足時清空按鈕被卡掉 */
-    .search-container {
-        position: sticky; top: 0; z-index: 100;
-        display: flex; 
-        gap: 8px; 
-        background: var(--bg-color);
-        padding: 10px 0; 
-        width: 100%;
-        box-sizing: border-box; /* 確保 padding 不會撐破寬度 */
-    }
-    .search-box {
-        flex: 1; 
-        min-width: 0; /* 這是關鍵：允許 input 縮小，不擠壓按鈕 */
-        padding: 12px 15px; 
-        font-size: 18px;
-        border: 2px solid var(--primary-color); 
-        border-radius: 10px;
-        outline: none; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .clear-btn {
-        flex-shrink: 0; /* 禁止按鈕被壓縮 */
-        padding: 0 15px; 
-        font-size: 16px; 
-        font-weight: bold;
-        background-color: #90a4ae; 
-        color: white;
-        border: none; 
-        border-radius: 10px; 
-        cursor: pointer;
-        white-space: nowrap; /* 強制文字不換行 */
-    }
-
-    /* 賓客卡片調整 */
-    .guest-card {
-        background: white; border-radius: 12px; padding: 15px;
-        margin-bottom: 12px; display: flex; justify-content: space-between;
-        align-items: center; border-left: 8px solid var(--primary-color);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-    .guest-info { flex: 1; min-width: 0; }
-    .guest-name { font-size: 24px; font-weight: bold; color: #1a1a1a; margin-bottom: 2px; }
-    .guest-org, .guest-job { 
-        font-size: 14px; color: #555; 
-        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; 
-    }
-    .guest-note {
-        display: inline-block; background-color: #fff9c4; color: var(--accent-color);
-        font-size: 13px; padding: 2px 8px; border-radius: 4px; margin-top: 5px;
-    }
-
-    .table-badge {
-        background-color: var(--primary-color); color: white;
-        padding: 6px; border-radius: 8px; text-align: center; 
-        min-width: 65px; margin-left: 10px; flex-shrink: 0;
-    }
-    .table-label { font-size: 10px; display: block; opacity: 0.8; }
-    .table-num { font-size: 26px; font-weight: 900; }
-
-    #status { text-align: center; color: #666; font-size: 16px; margin-top: 20px; }
-</style>
+        .guest-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid var(--p); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .guest-name { font-size: 22px; font-weight: bold; margin-bottom: 2px; }
+        .guest-org { font-size: 14px; color: #666; }
+        .table-badge { background: var(--p); color: #fff; padding: 8px; border-radius: 8px; text-align: center; min-width: 60px; }
+        .table-num { font-size: 24px; font-weight: bold; display: block; }
+        
+        #status { text-align: center; color: #999; font-size: 14px; margin-top: 15px; }
+        /* 隱藏未搜尋時的卡片 */
+        #resultsList { width: 100%; }
+    </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>賓客歡迎查詢系統</h1>
+<h1>賓客歡迎查詢系統</h1>
     <div class="search-container">
-        <input type="text" id="searchInput" class="search-box" placeholder="輸入姓名、單位或職稱..." autocomplete="off">
+        <input type="text" id="searchInput" class="search-box" placeholder="點擊此處輸入姓名..." autocomplete="off">
         <button id="clearBtn" class="clear-btn">清空</button>
     </div>
-    <div id="status">正在同步名冊...</div>
+    <div id="status">準備中...</div>
     <div id="resultsList"></div>
 </div>
 
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxmcFoTi_durh7ZGKyQ7d7wmuHPyth47MB0oypGxfBcGF_WIEZ9qhqVj-bscudAl_M/exec';
     let guestData = [];
-    const { pinyin } = pinyinPro;
 
-    async function init() {
+    // 異步平行處理：不阻塞頁面渲染
+    (async function init() {
+        const status = document.getElementById('status');
         try {
-            const response = await fetch(scriptURL);
-            const rawData = await response.json();
-            guestData = rawData.map(g => ({
-                name: String(g['姓名'] || ""),
-                org: String(g['單位'] || ""),
-                job: String(g['職稱'] || ""),
-                table: String(g['桌次'] || ""),
-                note: String(g['備註'] || ""),
-                firstZh: g['姓名'] ? pinyin(String(g['姓名']).charAt(0), { type: 'zh' }).charAt(0) : ''
-            }));
-            document.getElementById('status').innerText = '系統就緒，請輸入關鍵字';
+            // 使用更輕量的 fetch 配置
+            const res = await fetch(scriptURL, { method: 'GET', mode: 'cors' });
+            guestData = await res.json();
+            status.innerText = "請輸入姓名查詢桌次";
         } catch (e) {
-            document.getElementById('status').innerText = '連線失敗，請檢查網路';
+            status.innerText = "網路不穩，請重新掃描";
         }
-    }
+    })();
 
     const input = document.getElementById('searchInput');
     const list = document.getElementById('resultsList');
     const status = document.getElementById('status');
-    const clearBtn = document.getElementById('clearBtn');
 
-    clearBtn.addEventListener('click', () => {
+    document.getElementById('clearBtn').onclick = () => {
         input.value = '';
         list.innerHTML = '';
         status.style.display = 'block';
         input.focus();
-    });
+    };
 
-    input.addEventListener('input', (e) => {
-        const key = e.target.value.trim().toLowerCase();
+    input.oninput = () => {
+        const key = input.value.trim().toLowerCase();
         if (!key) { list.innerHTML = ''; status.style.display = 'block'; return; }
-
-        const keyFirstZh = pinyin(key.charAt(0), { type: 'zh' }).charAt(0);
-
-        // 1. 先篩選出所有符合條件的賓客
-        let matched = guestData.filter(g => {
-            const nameMatch = g.name.toLowerCase().includes(key);
-            const orgMatch = g.org.toLowerCase().includes(key);
-            const jobMatch = g.job.toLowerCase().includes(key);
-            const fuzzyMatch = (g.firstZh === keyFirstZh);
-            return nameMatch || orgMatch || jobMatch || fuzzyMatch;
+        
+        // 極速過濾邏輯
+        const matched = guestData.filter(g => 
+            (g['姓名'] && g['姓名'].includes(key)) || 
+            (g['單位'] && g['單位'].includes(key))
+        ).sort((a,b) => {
+            if (a['姓名'] === key) return -1;
+            return a['姓名'].startsWith(key) ? -1 : 1;
         });
 
-        // 2. 進行權重排序
-        matched.sort((a, b) => {
-            function getWeight(g) {
-                const n = g.name.toLowerCase();
-                const o = g.org.toLowerCase();
-                const j = g.job.toLowerCase();
-                
-                if (n === key) return 100;           // 完全符合姓名（最高優先）
-                if (n.startsWith(key)) return 80;    // 姓名開頭符合
-                if (n.includes(key)) return 60;      // 姓名中間包含關鍵字
-                if (o.includes(key)) return 40;      // 單位符合
-                if (j.includes(key)) return 20;      // 職稱符合
-                if (g.firstZh === keyFirstZh) return 1; // 僅首音模糊符合（最後）
-                return 0;
-            }
-            return getWeight(b) - getWeight(a);
+        status.style.display = matched.length ? 'none' : 'block';
+        if (!matched.length) status.innerText = "查無資料";
+
+        // 使用 DocumentFragment 一次性渲染，減少 DOM 操作
+        const frag = document.createDocumentFragment();
+        matched.slice(0, 10).forEach(g => { // 限制顯示前10筆，加快渲染
+            const div = document.createElement('div');
+            div.className = 'guest-card';
+            div.innerHTML = `<div><div class="guest-name">${g['姓名']}</div><div class="guest-org">${g['單位']||''}</div></div>
+                             <div class="table-badge"><span style="font-size:10px">桌次</span><span class="table-num">${g['桌次']}</span></div>`;
+            frag.appendChild(div);
         });
-
-        render(matched);
-    });
-
-    function render(data) {
         list.innerHTML = '';
-        if (data.length === 0) {
-            status.style.display = 'block';
-            status.innerText = '查無結果';
-        } else {
-            status.style.display = 'none';
-            data.forEach(g => {
-                const noteSection = g.note ? `<div class="guest-note">💡 ${g.note}</div>` : '';
-                const item = document.createElement('div');
-                item.className = 'guest-card';
-                item.innerHTML = `
-                    <div class="guest-info">
-                        <div class="guest-name">${g.name}</div>
-                        <div class="guest-org">${g.org}</div>
-                        <div class="guest-job">${g.job}</div>
-                        ${noteSection}
-                    </div>
-                    <div class="table-badge">
-                        <span class="table-label">桌次</span>
-                        <span class="table-num">${g.table}</span>
-                    </div>`;
-                list.appendChild(item);
-            });
-        }
-    }
-
-    init();
+        list.appendChild(frag);
+    };
 </script>
 </body>
 </html>
