@@ -3,40 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>桌次查詢</title>
-	<link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">
+    <title>霍格華茲晚宴 - 桌次查詢</title>
+	<link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">	
     <style>
-        /* 採用系統預設字體，省去下載時間 */
-        :root { --p: #1a237e; --bg: #f0f2f5; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 500px; }
-		h1 { color: var(--p); text-align: center; font-size: 22px; margin: 10px 0; }
+        /* 魔法世界風格配色 */
+        :root { 
+            --gold: #d4af37; 
+            --deep-red: #740001; 
+            --parchment: #f4ede0; 
+            --dark-text: #2c1e16;
+        }
         
-        /* 預留高度防止跳動 */
-        .search-container { position: sticky; top: 0; display: flex; gap: 8px; background: var(--bg); padding: 10px 0; width: 100%; }
-        .search-box { flex: 1; min-width: 0; padding: 14px; font-size: 18px; border: 2px solid var(--p); border-radius: 10px; outline: none; }
-        .clear-btn { padding: 0 15px; background: #90a4ae; color: #fff; border: none; border-radius: 10px; font-weight: bold; white-space: nowrap; }
+        body { 
+            font-family: "Times New Roman", "微軟正黑體", serif; 
+            background-color: #1a1a1a; 
+            /* 設定背景圖：疊加深色漸層確保文字可讀性 */
+            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('bg.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed; /* 捲動時背景固定 */
+            background-repeat: no-repeat;
+            color: var(--parchment);
+            margin: 0; padding: 10px; 
+            display: flex; flex-direction: column; align-items: center; 
+            min-height: 100vh;
+        }
 
-        .guest-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 6px solid var(--p); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .guest-name { font-size: 22px; font-weight: bold; margin-bottom: 2px; }
-        .guest-org { font-size: 14px; color: #666; }
-        .table-badge { background: var(--p); color: #fff; padding: 8px; border-radius: 8px; text-align: center; min-width: 60px; }
-        .table-num { font-size: 24px; font-weight: bold; display: block; }
+        .container { width: 100%; max-width: 500px; }
         
-        #status { text-align: center; color: #999; font-size: 14px; margin-top: 15px; }
-        /* 隱藏未搜尋時的卡片 */
+        h1 { 
+            font-variant: small-caps;
+            color: var(--gold); 
+            text-align: center; 
+            font-size: 26px; 
+            margin: 20px 0;
+            text-shadow: 2px 2px 8px #000; /* 加強陰影讓文字脫離背景 */
+            letter-spacing: 2px;
+        }
+        
+        /* 搜尋區塊：加入半透明毛玻璃效果 */
+        .search-container { 
+            position: sticky; top: 0; 
+            display: flex; gap: 8px; 
+            background: rgba(26,26,26,0.85); 
+            backdrop-filter: blur(5px); /* 現代瀏覽器的毛玻璃效果 */
+            -webkit-backdrop-filter: blur(5px);
+            padding: 15px 0; width: 100%; z-index: 100; 
+        }
+
+        .search-box { 
+            flex: 1; min-width: 0; padding: 14px; font-size: 18px; 
+            border: 2px solid var(--gold); border-radius: 5px; 
+            background: var(--parchment); color: var(--dark-text);
+            outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .clear-btn { 
+            padding: 0 15px; background: var(--deep-red); color: var(--gold); 
+            border: 1px solid var(--gold); border-radius: 5px; 
+            font-weight: bold; white-space: nowrap; cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .clear-btn:active { transform: scale(0.95); }
+
+        /* 賓客卡片：羊皮紙風格 */
+        .guest-card { 
+            background: var(--parchment); 
+            background-image: url('https://www.transparenttextures.com/patterns/old-map.png');
+            color: var(--dark-text);
+            border-radius: 5px; padding: 18px; margin-bottom: 15px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border: 1px solid #d4c4a8;
+            box-shadow: 8px 8px 20px rgba(0,0,0,0.6);
+            position: relative;
+            overflow: hidden;
+            animation: fadeIn 0.4s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 卡片側邊裝飾線 */
+        .guest-card::before {
+            content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--deep-red);
+        }
+
+        .guest-name { font-size: 24px; font-weight: bold; margin-bottom: 4px; color: var(--deep-red); }
+        .guest-org { font-size: 15px; color: #5a4a3a; font-style: italic; }
+        
+        .guest-note { 
+            display: inline-block; margin-top: 8px; font-size: 13px; 
+            background: #e6dcc5; padding: 2px 8px; border-radius: 3px;
+            border-bottom: 1px solid var(--gold); color: #8a0000; font-weight: bold;
+        }
+
+        /* 桌次標章 */
+        .table-badge { 
+            background: var(--deep-red); color: var(--gold); 
+            padding: 10px; border-radius: 50% 50% 5px 5px; 
+            text-align: center; min-width: 65px; border: 2px solid var(--gold);
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+        }
+        .table-num { font-size: 28px; font-weight: bold; display: block; }
+        
+        #status { text-align: center; color: var(--gold); font-size: 16px; margin-top: 15px; font-style: italic; text-shadow: 1px 1px 2px #000; }
         #resultsList { width: 100%; }
     </style>
 </head>
 <body>
 
 <div class="container">
-<h1>賓客歡迎查詢系統</h1>
+    <h1>Hogwarts Feast <br> <span style="font-size: 16px;">賓客入席查詢</span></h1>
     <div class="search-container">
-        <input type="text" id="searchInput" class="search-box" placeholder="點擊此處輸入姓名..." autocomplete="off">
-        <button id="clearBtn" class="clear-btn">清空</button>
+        <input type="text" id="searchInput" class="search-box" placeholder="輸入您的姓名或單位..." autocomplete="off">
+        <button id="clearBtn" class="clear-btn">清除</button>
     </div>
-    <div id="status">準備中...</div>
+    <div id="status">正在翻閱預言家日報...</div>
     <div id="resultsList"></div>
 </div>
 
@@ -44,16 +128,14 @@
     const scriptURL = 'https://script.google.com/macros/s/AKfycbxmcFoTi_durh7ZGKyQ7d7wmuHPyth47MB0oypGxfBcGF_WIEZ9qhqVj-bscudAl_M/exec';
     let guestData = [];
 
-    // 異步平行處理：不阻塞頁面渲染
     (async function init() {
         const status = document.getElementById('status');
         try {
-            // 使用更輕量的 fetch 配置
             const res = await fetch(scriptURL, { method: 'GET', mode: 'cors' });
             guestData = await res.json();
-            status.innerText = "請輸入姓名查詢桌次";
+            status.innerText = "魔法契約已載入，請輸入姓名";
         } catch (e) {
-            status.innerText = "網路不穩，請重新掃描";
+            status.innerText = "呼神護衛！連線失敗，請重掃";
         }
     })();
 
@@ -72,25 +154,33 @@
         const key = input.value.trim().toLowerCase();
         if (!key) { list.innerHTML = ''; status.style.display = 'block'; return; }
         
-        // 極速過濾邏輯
         const matched = guestData.filter(g => 
-            (g['姓名'] && g['姓名'].includes(key)) || 
-            (g['單位'] && g['單位'].includes(key))
+            (g['姓名'] && String(g['姓名']).includes(key)) || 
+            (g['單位'] && String(g['單位']).includes(key)) ||
+            (g['單位簡稱'] && String(g['單位簡稱']).includes(key))
         ).sort((a,b) => {
             if (a['姓名'] === key) return -1;
-            return a['姓名'].startsWith(key) ? -1 : 1;
+            return String(a['姓名']).startsWith(key) ? -1 : 1;
         });
 
         status.style.display = matched.length ? 'none' : 'block';
-        if (!matched.length) status.innerText = "查無資料";
+        if (!matched.length) status.innerText = "地圖上找不到這位巫師";
 
-        // 使用 DocumentFragment 一次性渲染，減少 DOM 操作
         const frag = document.createDocumentFragment();
-        matched.slice(0, 10).forEach(g => { // 限制顯示前10筆，加快渲染
+        matched.slice(0, 10).forEach(g => {
             const div = document.createElement('div');
             div.className = 'guest-card';
-            div.innerHTML = `<div><div class="guest-name">${g['姓名']}</div><div class="guest-org">${g['單位']||''}</div></div>
-                             <div class="table-badge"><span style="font-size:10px">桌次</span><span class="table-num">${g['桌次']}</span></div>`;
+            const noteHtml = g['備註'] ? `<div class="guest-note">✨ ${g['備註']}</div>` : '';
+            div.innerHTML = `
+                <div>
+                    <div class="guest-name">${g['姓名']}</div>
+                    <div class="guest-org">${g['單位'] || ''}</div>
+                    ${noteHtml}
+                </div>
+                <div class="table-badge">
+                    <span style="font-size:10px">TABLE</span>
+                    <span class="table-num">${g['桌次']}</span>
+                </div>`;
             frag.appendChild(div);
         });
         list.innerHTML = '';
