@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小家物研所</title>
+<link rel="icon" type="image/svg+xml" href="package-box-svgrepo-com.svg">
+  <link href="https://font.emtech.cc/css/jfOpenHuninn" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <style>
+    :root {
+      --primary: #8EB69B;
+      --secondary: #FBDE81;
+      --accent: #FFADAD;
+      --text: #5D5D5D;
+      --bg: #FDFBF7;
+    }
+    body { 
+      font-family: 'JFOpenHuninn', "PingFang TC", "Microsoft JhengHei", sans-serif; 
+      background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; 
+      display: flex; justify-content: center; 
+    }
+    .container { width: 100%; max-width: 500px; background: white; border-radius: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); overflow: hidden; border: 2px solid #EEE; position: relative; padding-bottom: 10px; }
+    
+    .header { background: var(--primary); color: white; padding: 20px; text-align: center; }
+    .header h2 { margin: 0; font-size: 1.5rem; letter-spacing: 2px; }
+    #status { font-size: 11px; opacity: 0.8; margin-top: 5px; }
+
+    .tabs { display: flex; background: #F4F4F4; padding: 5px; margin-bottom: 10px; }
+    .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; border-radius: 15px; font-weight: bold; transition: 0.3s; font-size: 14px; color: #888; }
+    .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .tab i { margin-right: 5px; } /* 圖示間距 */
+
+    .content { display: none; padding: 0 20px 20px; animation: fadeIn 0.4s; }
+    .content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    label { display: block; margin: 15px 0 5px; font-weight: bold; font-size: 14px; }
+    label i { width: 20px; color: var(--primary); margin-right: 5px; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #DDD; border-radius: 12px; box-sizing: border-box; font-size: 16px; outline: none; background: #FAFAFA; font-family: 'JFOpenHuninn'; }
+    input:focus { border-color: var(--primary); background: white; }
+    
+    button { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'JFOpenHuninn'; }
+    .btn-main { background: var(--primary); color: white; margin-top: 20px; }
+    .btn-main:active { transform: scale(0.98); }
+    .btn-main:disabled { background: #CCC; cursor: not-allowed; }
+    .btn-main i { margin-right: 8px; }
+
+    .img-preview { width: 70px; height: 70px; border-radius: 12px; object-fit: cover; cursor: zoom-in; background: #EEE; border: 1px solid #EEE; transition: 0.3s; }
+
+    .card { background: white; border: 1px solid #EEE; border-radius: 15px; padding: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; }
+    .stock-tag { padding: 4px 10px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+
+    .record-item { 
+      display: flex; 
+      align-items: center; 
+      gap: 12px; 
+      padding: 12px 0; 
+      border-bottom: 1px solid #F0F0F0; 
+    }
+    .record-item:last-child { border-bottom: none; }
+
+    #toast { 
+      visibility: hidden; min-width: 200px; background-color: #555; color: #fff; text-align: center; border-radius: 50px; 
+      padding: 12px 24px; position: fixed; z-index: 1101; bottom: 30px; left: 50%; transform: translateX(-50%); 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2); font-size: 14px; transition: 0.3s; 
+    }
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+    @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+    @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+    .modal-content { background: white; width: 100%; max-width: 450px; height: 80vh; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; }
+    .modal-header { padding: 15px 20px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { flex: 1; overflow-y: auto; padding: 15px; }
+
+    #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1200; justify-content: center; align-items: center; cursor: zoom-out; }
+    #lightbox img { max-width: 90%; max-height: 80%; border-radius: 12px; border: 4px solid white; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h2>小家物研所 <i class="fa-solid fa-house-chimney"></i></h2>
+    <div id="status"><i class="fa-solid fa-spinner fa-spin"></i> 初始化中...</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="usage" onclick="switchTab('usage')"><i class="fa-solid fa-hand-holding-heart"></i>領用</div>
+    <div class="tab" data-tab="purchase" onclick="switchTab('purchase')"><i class="fa-solid fa-cart-plus"></i>進貨</div>
+    <div class="tab" data-tab="query" onclick="switchTab('query')"><i class="fa-solid fa-list-check"></i>庫存清單</div>
+  </div>
+
+  <div id="usageSection" class="content active">
+    <label><i class="fa-solid fa-tag"></i> 品項類型:</label>
+    <select id="uCategory" onchange="updateBatchPreview()"></select>
+    <div id="batchPreview" style="margin-top:15px; display:none;">
+      <div class="card" style="background:#F0F7F2; border:none;">
+        <img id="uPreviewImg" class="img-preview" src="" onclick="zoomImg(this.src)">
+        <div style="flex:1">
+          <div id="uPreviewName" style="font-weight:bold;">--</div>
+          <div style="font-size:12px; color:#666;">最近效期：<span id="uPreviewExpiry">--</span></div>
+          <div class="stock-tag" style="background:var(--secondary); display:inline-block; margin-top:5px;">剩餘：<span id="uPreviewRemain">--</span></div>
+        </div>
+      </div>
+    </div>
+    <label><i class="fa-solid fa-calculator"></i> 使用數量:</label>
+    <input type="number" id="uQty" value="1" min="1">
+    <button class="btn-main" onclick="submitUsage()" id="btnU"><i class="fa-solid fa-check"></i>確認領用</button>
+  </div>
+
+  <div id="purchaseSection" class="content">
+    <label><i class="fa-solid fa-calendar-day"></i> 日期:</label><input type="date" id="pDate">
+    <label><i class="fa-solid fa-layer-group"></i> 品項類型:</label><select id="pCategory"></select>
+    <label><i class="fa-solid fa-pen-to-square"></i> 詳細名稱:</label><input type="text" id="pName" placeholder="例如：超柔感牙膏">
+    <label><i class="fa-solid fa-boxes-stacked"></i> 進貨數量:</label><input type="number" id="pQty" placeholder="0" min="1">
+    <label><i class="fa-solid fa-hourglass-end"></i> 保存期限:</label><input type="date" id="pExpiry">
+    <label><i class="fa-solid fa-camera"></i> 品項照片:</label>
+    <div style="border: 2px dashed #DDD; border-radius: 12px; padding: 20px; text-align: center; background: #FAFAFA;">
+      <input type="file" id="pImgFile" accept="image/*" onchange="handleImageUpload(this)">
+      <div id="imgStatus" style="font-size:12px; color:var(--primary); margin-top:8px; font-weight:bold;">尚未拍照</div>
+    </div>
+    <button class="btn-main" onclick="submitPurchase()" id="btnP"><i class="fa-solid fa-truck-ramp-box"></i>確認入庫</button>
+  </div>
+
+  <div id="querySection" class="content">
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+      <button onclick="openModal('purchase')" style="flex:1; background:#6b8e76; color:white; font-size:14px; border-radius:12px;"><i class="fa-solid fa-box-open"></i> 查進貨</button>
+      <button onclick="openModal('usage')" style="flex:1; background:#a89078; color:white; font-size:14px; border-radius:12px;"><i class="fa-solid fa-receipt"></i> 查領用</button>
+    </div>
+    <div id="inventoryList"></div>
+  </div>
+</div>
+
+<div id="toast">提醒內容</div>
+
+<div id="recordModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header"><b id="modalTitle"><i class="fa-solid fa-rectangle-list"></i> 紀錄清單</b><span onclick="closeModal()" style="cursor:pointer; font-size:24px;"><i class="fa-solid fa-xmark"></i></span></div>
+    <div id="modalBody" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="lightbox" onclick="this.style.display='none'"><img id="lightboxImg"></div>
+
+<script>
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbze99wKzNe8vLHcwODUrlSJf_jbbZD7eNp7rt9FBsuooz-C71yVsdO1RfH2UiXoN9AR/exec"; 
+  
+  let localCache = { inventory: [], batches: {}, lastUpdate: null };
+  let currentWebpBase64 = "";
+
+  window.onload = () => {
+    document.getElementById('pDate').value = new Date().toISOString().split('T')[0];
+    initAllData();
+  };
+
+  async function initAllData(isRefresh = false) {
+    if(!isRefresh) document.getElementById('status').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在同步雲端資料...';
+    try {
+      const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getCategoryList" }) });
+      const json = await res.json();
+      if (json.status === "success") {
+        localCache.inventory = json.data;
+        localCache.lastUpdate = new Date();
+        const options = localCache.inventory.map(c => `<option value="${c.category}">${c.category}</option>`).join('');
+        document.getElementById('uCategory').innerHTML = options;
+        document.getElementById('pCategory').innerHTML = options;
+        await preloadAllBatches();
+        document.getElementById('status').innerHTML = '<i class="fa-solid fa-circle-check"></i> 同步完成 (' + localCache.lastUpdate.toLocaleTimeString() + ')';
+        updateBatchPreview(); 
+        if(document.getElementById('querySection').classList.contains('active')) renderInventory();
+      }
+    } catch(e) { 
+      document.getElementById('status').innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> 同bs失敗';
+      showToast("連線失敗，請檢查網路");
+    }
+  }
+
+  async function preloadAllBatches() {
+    const cat = document.getElementById('uCategory').value;
+    if(cat) await getBatchWithCache(cat);
+  }
+
+  async function getBatchWithCache(category) {
+    if (localCache.batches[category]) return localCache.batches[category];
+    const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getFirstBatch", category }) });
+    const json = await res.json();
+    localCache.batches[category] = json.data;
+    return json.data;
+  }
+
+  function switchTab(mode) {
+    document.querySelectorAll('.tab, .content').forEach(el => el.classList.remove('active'));
+    document.querySelector(`[data-tab="${mode}"]`).classList.add('active');
+    document.getElementById(mode + 'Section').classList.add('active');
+    if(mode === 'query') renderInventory();
+    if(mode === 'usage') updateBatchPreview();
+  }
+
+  async function updateBatchPreview() {
+    const category = document.getElementById('uCategory').value;
+    const data = await getBatchWithCache(category);
+    const box = document.getElementById('batchPreview');
+    if (data) {
+      document.getElementById('uPreviewImg').src = data.imgId || 'https://via.placeholder.com/100?text=No+Img';
+      document.getElementById('uPreviewName').innerText = data.name || category;
+      document.getElementById('uPreviewExpiry').innerText = data.expiry.split('T')[0];
+      document.getElementById('uPreviewRemain').innerText = data.remain;
+      box.style.display = 'block';
+    } else { box.style.display = 'none'; }
+  }
+
+  function renderInventory() {
+    const listDiv = document.getElementById('inventoryList');
+    listDiv.innerHTML = localCache.inventory.map(item => {
+      const batchData = localCache.batches[item.category];
+      const imgUrl = batchData ? batchData.imgId : 'https://via.placeholder.com/100?text=No+Img';
+      return `
+        <div class="card">
+          <img class="img-preview" src="${imgUrl}" onclick="zoomImg(this.src)">
+          <div style="flex:1">
+            <div style="font-weight:bold">${item.category}</div>
+            <div style="font-size:12px; color:#999">目前存量：<b style="color:var(--primary); font-size:16px;">${item.currentStock}</b></div>
+          </div>
+          <div class="stock-tag" style="background:${item.currentStock <= item.safeStock ? 'var(--accent)' : 'var(--secondary)'}">
+            ${item.currentStock <= item.safeStock ? '<i class="fa-solid fa-triangle-exclamation"></i> 補貨中' : '<i class="fa-solid fa-square-check"></i> 充足'}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.innerText = msg;
+    t.className = "show";
+    setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
+  }
+
+  async function submitUsage() {
+    const btn = document.getElementById('btnU');
+    btn.disabled = true;
+    try {
+      const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "deduct", category: document.getElementById('uCategory').value, amount: document.getElementById('uQty').value })});
+      const result = await res.json();
+      showToast(result.message);
+      localCache.batches = {}; 
+      await initAllData(true);
+    } finally { btn.disabled = false; }
+  }
+
+  async function submitPurchase() {
+    const btn = document.getElementById('btnP');
+    const payload = {
+      action: "purchase", date: document.getElementById('pDate').value, category: document.getElementById('pCategory').value,
+      name: document.getElementById('pName').value, amount: document.getElementById('pQty').value, expiry: document.getElementById('pExpiry').value, imageBlob: currentWebpBase64
+    };
+    if(!payload.amount || !payload.expiry) return showToast("請填寫數量與效期");
+    btn.disabled = true;
+    try {
+      const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
+      const result = await res.json();
+      showToast(result.message);
+      localCache.batches = {};
+      await initAllData(true);
+      document.getElementById('pName').value = ""; document.getElementById('pQty').value = "";
+      document.getElementById('imgStatus').innerHTML = '<i class="fa-solid fa-circle-question"></i> 尚未拍照'; currentWebpBase64 = "";
+    } finally { btn.disabled = false; }
+  }
+
+  function zoomImg(src) {
+    if(!src || src.includes('placeholder')) return;
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightbox').style.display = 'flex';
+  }
+
+  function handleImageUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('imgStatus').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 處理中...';
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const max_size = 800;
+        let width = img.width, height = img.height;
+        if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } }
+        else { if (height > max_size) { width *= max_size / height; height = max_size; } }
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        currentWebpBase64 = canvas.toDataURL('image/webp', 0.7);
+        document.getElementById('imgStatus').innerHTML = '<i class="fa-solid fa-circle-check"></i> 已就緒';
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function openModal(type) {
+    const modal = document.getElementById('recordModal');
+    const body = document.getElementById('modalBody');
+    modal.style.display = 'flex';
+    body.innerHTML = "<div style='text-align:center; padding:20px;'><i class='fa-solid fa-spinner fa-spin'></i> 讀取雲端紀錄中...</div>";
+    document.getElementById('modalTitle').innerHTML = type === 'purchase' ? '<i class="fa-solid fa-box-open"></i> 進貨歷史' : '<i class="fa-solid fa-receipt"></i> 領用歷史';
+    
+    const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: type === 'purchase' ? 'getPurchaseHistory' : 'getUsageHistory' }) });
+    const json = await res.json();
+    
+    body.innerHTML = json.data.map(d => `
+      <div class="record-item">
+        <img class="img-preview" src="${d.imgId || 'https://via.placeholder.com/100?text=No+Img'}" onclick="zoomImg(this.src)" style="width:55px; height:55px; flex-shrink:0;">
+        <div style="flex:1; font-size:14px; line-height:1.4;">
+          <div style="font-weight:bold; color:var(--text);">${d.category} ${d.name || ''}</div>
+          <div style="color:#888; font-size:12px; margin-top:2px;">
+            <i class="fa-regular fa-calendar-check"></i> ${new Date(d.date).toLocaleDateString()} | 數量: <span style="color:var(--primary); font-weight:bold;">${d.qty}</span>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function closeModal() { document.getElementById('recordModal').style.display = 'none'; }
+</script>
+</body>
+</html>
