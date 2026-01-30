@@ -4,9 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>小家物研所</title>
-<link rel="icon" type="image/svg+xml" href="package-box-svgrepo-com.svg">
+  <link rel="icon" type="image/svg+xml" href="package-box-svgrepo-com.svg">
   <link href="https://font.emtech.cc/css/jfOpenHuninn" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#8EB69B">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icon.png">
   <style>
     :root {
       --primary: #8EB69B;
@@ -29,7 +34,7 @@
     .tabs { display: flex; background: #F4F4F4; padding: 5px; margin-bottom: 10px; }
     .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; border-radius: 15px; font-weight: bold; transition: 0.3s; font-size: 14px; color: #888; }
     .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .tab i { margin-right: 5px; } /* 圖示間距 */
+    .tab i { margin-right: 5px; }
 
     .content { display: none; padding: 0 20px 20px; animation: fadeIn 0.4s; }
     .content.active { display: block; }
@@ -97,7 +102,7 @@
     <select id="uCategory" onchange="updateBatchPreview()"></select>
     <div id="batchPreview" style="margin-top:15px; display:none;">
       <div class="card" style="background:#F0F7F2; border:none;">
-        <img id="uPreviewImg" class="img-preview" src="" onclick="zoomImg(this.src)">
+        <img id="uPreviewImg" class="img-preview" src="" onclick="zoomImg(this.src)" referrerpolicy="no-referrer">
         <div style="flex:1">
           <div id="uPreviewName" style="font-weight:bold;">--</div>
           <div style="font-size:12px; color:#666;">最近效期：<span id="uPreviewExpiry">--</span></div>
@@ -172,22 +177,25 @@
         if(document.getElementById('querySection').classList.contains('active')) renderInventory();
       }
     } catch(e) { 
-      document.getElementById('status').innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> 同bs失敗';
+      document.getElementById('status').innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> 同步失敗';
       showToast("連線失敗，請檢查網路");
     }
   }
 
   async function preloadAllBatches() {
-    const cat = document.getElementById('uCategory').value;
-    if(cat) await getBatchWithCache(cat);
+    // 預加載所有品項的第一批次，避免庫存清單圖片破圖與效期顯示延遲
+    const categories = localCache.inventory.map(i => i.category);
+    await Promise.all(categories.map(cat => getBatchWithCache(cat)));
   }
 
   async function getBatchWithCache(category) {
     if (localCache.batches[category]) return localCache.batches[category];
-    const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getFirstBatch", category }) });
-    const json = await res.json();
-    localCache.batches[category] = json.data;
-    return json.data;
+    try {
+        const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getFirstBatch", category }) });
+        const json = await res.json();
+        localCache.batches[category] = json.data;
+        return json.data;
+    } catch(e) { return null; }
   }
 
   function switchTab(mode) {
@@ -205,7 +213,7 @@
     if (data) {
       document.getElementById('uPreviewImg').src = data.imgId || 'https://via.placeholder.com/100?text=No+Img';
       document.getElementById('uPreviewName').innerText = data.name || category;
-      document.getElementById('uPreviewExpiry').innerText = data.expiry.split('T')[0];
+      document.getElementById('uPreviewExpiry').innerText = data.expiry ? data.expiry.split('T')[0] : '無';
       document.getElementById('uPreviewRemain').innerText = data.remain;
       box.style.display = 'block';
     } else { box.style.display = 'none'; }
@@ -216,11 +224,14 @@
     listDiv.innerHTML = localCache.inventory.map(item => {
       const batchData = localCache.batches[item.category];
       const imgUrl = batchData ? batchData.imgId : 'https://via.placeholder.com/100?text=No+Img';
+      const expiryStr = (batchData && batchData.expiry) ? batchData.expiry.split('T')[0] : '尚未記錄';
+      
       return `
         <div class="card">
-          <img class="img-preview" src="${imgUrl}" onclick="zoomImg(this.src)">
+          <img class="img-preview" src="${imgUrl}" onclick="zoomImg(this.src)" referrerpolicy="no-referrer">
           <div style="flex:1">
             <div style="font-weight:bold">${item.category}</div>
+            <div style="font-size:12px; color:#999">最近效期：<span style="color:#666">${expiryStr}</span></div>
             <div style="font-size:12px; color:#999">目前存量：<b style="color:var(--primary); font-size:16px;">${item.currentStock}</b></div>
           </div>
           <div class="stock-tag" style="background:${item.currentStock <= item.safeStock ? 'var(--accent)' : 'var(--secondary)'}">
@@ -307,19 +318,34 @@
     const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: type === 'purchase' ? 'getPurchaseHistory' : 'getUsageHistory' }) });
     const json = await res.json();
     
-    body.innerHTML = json.data.map(d => `
+    body.innerHTML = json.data.map(d => {
+      const dateStr = new Date(d.date).toLocaleDateString();
+      const expiryStr = d.expiry ? new Date(d.expiry).toLocaleDateString() : '無';
+      const detailLabel = type === 'purchase' ? 
+        `<i class="fa-solid fa-hourglass-half"></i> 效期: ${expiryStr}` : 
+        `<i class="fa-regular fa-calendar-check"></i> ${dateStr}`;
+
+      return `
       <div class="record-item">
-        <img class="img-preview" src="${d.imgId || 'https://via.placeholder.com/100?text=No+Img'}" onclick="zoomImg(this.src)" style="width:55px; height:55px; flex-shrink:0;">
+        <img class="img-preview" src="${d.imgId || 'https://via.placeholder.com/100?text=No+Img'}" onclick="zoomImg(this.src)" referrerpolicy="no-referrer" style="width:55px; height:55px; flex-shrink:0;">
         <div style="flex:1; font-size:14px; line-height:1.4;">
           <div style="font-weight:bold; color:var(--text);">${d.category} ${d.name || ''}</div>
           <div style="color:#888; font-size:12px; margin-top:2px;">
-            <i class="fa-regular fa-calendar-check"></i> ${new Date(d.date).toLocaleDateString()} | 數量: <span style="color:var(--primary); font-weight:bold;">${d.qty}</span>
+            ${detailLabel} | 數量: <span style="color:var(--primary); font-weight:bold;">${d.qty}</span>
           </div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   function closeModal() { document.getElementById('recordModal').style.display = 'none'; }
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js');
+    });
+  }
 </script>
 </body>
 </html>
