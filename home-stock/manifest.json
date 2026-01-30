@@ -1,6 +1,6 @@
 {
   "name": "小家物研所",
-  "short_name": "物研所",
+  "short_name": "小家物研所",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#FDFBF7",
@@ -12,4 +12,5 @@
       "type": "image/png"
     }
   ]
+
 }
