@@ -155,11 +155,18 @@
   let localCache = { inventory: [], batches: {}, lastUpdate: null };
   let currentWebpBase64 = "";
 
+  // 初始化
   window.onload = () => {
-    document.getElementById('pDate').value = new Date().toISOString().split('T')[0];
+    // 修正時差：獲取在地正確的 YYYY-MM-DD
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    document.getElementById('pDate').value = `${y}-${m}-${d}`;
     initAllData();
   };
 
+  // 同步雲端資料
   async function initAllData(isRefresh = false) {
     if(!isRefresh) document.getElementById('status').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在同步雲端資料...';
     try {
@@ -182,8 +189,8 @@
     }
   }
 
+  // 預加載圖片與效期，防止破圖
   async function preloadAllBatches() {
-    // 預加載所有品項的第一批次，避免庫存清單圖片破圖與效期顯示延遲
     const categories = localCache.inventory.map(i => i.category);
     await Promise.all(categories.map(cat => getBatchWithCache(cat)));
   }
@@ -206,6 +213,7 @@
     if(mode === 'usage') updateBatchPreview();
   }
 
+  // 更新領用預覽卡片
   async function updateBatchPreview() {
     const category = document.getElementById('uCategory').value;
     const data = await getBatchWithCache(category);
@@ -213,18 +221,20 @@
     if (data) {
       document.getElementById('uPreviewImg').src = data.imgId || 'https://via.placeholder.com/100?text=No+Img';
       document.getElementById('uPreviewName').innerText = data.name || category;
-      document.getElementById('uPreviewExpiry').innerText = data.expiry ? data.expiry.split('T')[0] : '無';
+      // 處理日期字串截斷
+      document.getElementById('uPreviewExpiry').innerText = data.expiry ? data.expiry.substring(0,10) : '無';
       document.getElementById('uPreviewRemain').innerText = data.remain;
       box.style.display = 'block';
     } else { box.style.display = 'none'; }
   }
 
+  // 渲染庫存清單 (包含破圖修正與效期顯示)
   function renderInventory() {
     const listDiv = document.getElementById('inventoryList');
     listDiv.innerHTML = localCache.inventory.map(item => {
       const batchData = localCache.batches[item.category];
       const imgUrl = batchData ? batchData.imgId : 'https://via.placeholder.com/100?text=No+Img';
-      const expiryStr = (batchData && batchData.expiry) ? batchData.expiry.split('T')[0] : '尚未記錄';
+      const expiryStr = (batchData && batchData.expiry) ? batchData.expiry.substring(0,10) : '尚未記錄';
       
       return `
         <div class="card">
@@ -248,6 +258,7 @@
     setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
   }
 
+  // 確認領用
   async function submitUsage() {
     const btn = document.getElementById('btnU');
     btn.disabled = true;
@@ -260,11 +271,17 @@
     } finally { btn.disabled = false; }
   }
 
+  // 確認入庫
   async function submitPurchase() {
     const btn = document.getElementById('btnP');
     const payload = {
-      action: "purchase", date: document.getElementById('pDate').value, category: document.getElementById('pCategory').value,
-      name: document.getElementById('pName').value, amount: document.getElementById('pQty').value, expiry: document.getElementById('pExpiry').value, imageBlob: currentWebpBase64
+      action: "purchase", 
+      date: document.getElementById('pDate').value, 
+      category: document.getElementById('pCategory').value,
+      name: document.getElementById('pName').value, 
+      amount: document.getElementById('pQty').value, 
+      expiry: document.getElementById('pExpiry').value, 
+      imageBlob: currentWebpBase64
     };
     if(!payload.amount || !payload.expiry) return showToast("請填寫數量與效期");
     btn.disabled = true;
@@ -279,12 +296,14 @@
     } finally { btn.disabled = false; }
   }
 
+  // 燈箱放大
   function zoomImg(src) {
     if(!src || src.includes('placeholder')) return;
     document.getElementById('lightboxImg').src = src;
     document.getElementById('lightbox').style.display = 'flex';
   }
 
+  // 處理照片上傳與壓縮
   function handleImageUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -308,6 +327,7 @@
     reader.readAsDataURL(file);
   }
 
+  // 打開歷史紀錄彈窗 (包含進貨效期顯示)
   async function openModal(type) {
     const modal = document.getElementById('recordModal');
     const body = document.getElementById('modalBody');
@@ -315,31 +335,37 @@
     body.innerHTML = "<div style='text-align:center; padding:20px;'><i class='fa-solid fa-spinner fa-spin'></i> 讀取雲端紀錄中...</div>";
     document.getElementById('modalTitle').innerHTML = type === 'purchase' ? '<i class="fa-solid fa-box-open"></i> 進貨歷史' : '<i class="fa-solid fa-receipt"></i> 領用歷史';
     
-    const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: type === 'purchase' ? 'getPurchaseHistory' : 'getUsageHistory' }) });
-    const json = await res.json();
-    
-    body.innerHTML = json.data.map(d => {
-      const dateStr = new Date(d.date).toLocaleDateString();
-      const expiryStr = d.expiry ? new Date(d.expiry).toLocaleDateString() : '無';
-      const detailLabel = type === 'purchase' ? 
-        `<i class="fa-solid fa-hourglass-half"></i> 效期: ${expiryStr}` : 
-        `<i class="fa-regular fa-calendar-check"></i> ${dateStr}`;
+    try {
+      const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: type === 'purchase' ? 'getPurchaseHistory' : 'getUsageHistory' }) });
+      const json = await res.json();
+      
+      body.innerHTML = json.data.map(d => {
+        // 修正日期顯示
+        const dateStr = d.date ? d.date.substring(0, 10) : '無';
+        const expiryStr = d.expiry ? d.expiry.substring(0, 10) : '無';
+        
+        // 進貨歷史顯示效期，領用歷史顯示領用日
+        const detailLabel = type === 'purchase' ? 
+          `<i class="fa-solid fa-hourglass-half"></i> 效期: ${expiryStr}` : 
+          `<i class="fa-regular fa-calendar-check"></i> ${dateStr}`;
 
-      return `
-      <div class="record-item">
-        <img class="img-preview" src="${d.imgId || 'https://via.placeholder.com/100?text=No+Img'}" onclick="zoomImg(this.src)" referrerpolicy="no-referrer" style="width:55px; height:55px; flex-shrink:0;">
-        <div style="flex:1; font-size:14px; line-height:1.4;">
-          <div style="font-weight:bold; color:var(--text);">${d.category} ${d.name || ''}</div>
-          <div style="color:#888; font-size:12px; margin-top:2px;">
-            ${detailLabel} | 數量: <span style="color:var(--primary); font-weight:bold;">${d.qty}</span>
+        return `
+        <div class="record-item">
+          <img class="img-preview" src="${d.imgId || 'https://via.placeholder.com/100?text=No+Img'}" onclick="zoomImg(this.src)" referrerpolicy="no-referrer" style="width:55px; height:55px; flex-shrink:0;">
+          <div style="flex:1; font-size:14px; line-height:1.4;">
+            <div style="font-weight:bold; color:var(--text);">${d.category} ${d.name || ''}</div>
+            <div style="color:#888; font-size:12px; margin-top:2px;">
+              ${detailLabel} | 數量: <span style="color:var(--primary); font-weight:bold;">${d.qty}</span>
+            </div>
           </div>
-        </div>
-      </div>`;
-    }).join('');
+        </div>`;
+      }).join('');
+    } catch(e) { body.innerHTML = "讀取紀錄失敗"; }
   }
 
   function closeModal() { document.getElementById('recordModal').style.display = 'none'; }
 </script>
+
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -347,5 +373,6 @@
     });
   }
 </script>
+
 </body>
 </html>
