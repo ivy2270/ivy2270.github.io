@@ -1,0 +1,15 @@
+{
+  "name": "小家物研所",
+  "short_name": "物研所",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#FDFBF7",
+  "theme_color": "#8EB69B",
+  "icons": [
+    {
+      "src": "package.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
