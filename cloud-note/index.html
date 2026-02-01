@@ -151,7 +151,7 @@
     #loader { text-align: center; padding: 20px; color: var(--accent-color); font-weight: bold; }
     .admin-only { display: none !important; }
     body.admin-mode .admin-only { display: block !important; }
-    body.admin-mode button.admin-only { display: flex !important; } /* 注意這裡是 flex */
+    body.admin-mode button.admin-only { display: flex !important; }
   </style>
 </head>
 <body>
@@ -338,9 +338,15 @@ async function saveNote(id, card, button) {
   } finally { button.disabled = false; }
 }
 
+// 修改後的複製功能：自動排除 #TAG
 function copyNote(card, button) {
   const note = allNotes.find(n => n.id === card.dataset.id);
-  navigator.clipboard.writeText(note.content).then(() => {
+  
+  // 使用正則表達式移除所有 #TAG (包括後方的一個空白)
+  // 原理：找到 # 字開頭，直到空格或結尾的字串
+  const cleanContent = note.content.replace(/#[^\s#]+\s?/g, '').trim();
+  
+  navigator.clipboard.writeText(cleanContent).then(() => {
     const oldHtml = button.innerHTML;
     button.innerHTML = '<i class="fa-solid fa-check"></i>';
     setTimeout(() => { button.innerHTML = oldHtml; }, 2000);
