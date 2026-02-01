@@ -222,25 +222,53 @@
     if (data) {
       document.getElementById('uPreviewImg').src = data.imgId || 'https://via.placeholder.com/100?text=No+Img';
       document.getElementById('uPreviewName').innerText = data.name || category;
-      document.getElementById('uPreviewExpiry').innerText = data.expiry ? data.expiry.substring(0,10) : '無';
+	  document.getElementById('uPreviewExpiry').innerText = data.expiry ? data.expiry.substring(0,10) : '無';
       document.getElementById('uPreviewRemain').innerText = data.remain;
       box.style.display = 'block';
     } else { box.style.display = 'none'; }
   }
-
-  function renderInventory() {
+  
+function renderInventory() {
     const listDiv = document.getElementById('inventoryList');
+    const now = new Date();
+    // 設定今天中午，避免時區導致 diffDays 計算差一天的問題
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+
     listDiv.innerHTML = localCache.inventory.map(item => {
       const batchData = localCache.batches[item.category];
       const imgUrl = batchData ? batchData.imgId : 'https://via.placeholder.com/100?text=No+Img';
-      const expiryStr = (batchData && batchData.expiry) ? batchData.expiry.substring(0,10) : '尚未記錄';
+      
+      let expiryStr = '尚未記錄';
+      let expiryStyle = 'color:#666'; 
+
+      if (batchData && batchData.expiry) {
+        // 直接使用 GAS 傳過來的文字
+        const rawExpiry = batchData.expiry.substring(0, 10); 
+        expiryStr = rawExpiry;
+
+        // 計算天數差異：強制設定為中午，消除時區邊際誤差
+        const parts = rawExpiry.split(/[-/]/); // 支援 - 或 /
+        const expDate = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0); 
+        const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) {
+          expiryStr += " (已過期)";
+          expiryStyle = "color: #D9534F; font-weight: bold;"; 
+        } else if (diffDays <= 30) {
+          expiryStr += ` (剩 ${diffDays} 天)`;
+          expiryStyle = "color: #FF4D4D; font-weight: bold;"; 
+        } else if (diffDays <= 90) {
+          expiryStr += ` (剩 ${diffDays} 天)`;
+          expiryStyle = "color: #F0AD4E; font-weight: bold;"; 
+        }
+      }
       
       return `
         <div class="card">
           <img class="img-preview" src="${imgUrl}" onclick="zoomImg(this.src)" referrerpolicy="no-referrer">
           <div style="flex:1">
             <div style="font-weight:bold">${item.category}</div>
-            <div style="font-size:12px; color:#999">最近效期：<span style="color:#666">${expiryStr}</span></div>
+            <div style="font-size:12px; color:#999">最近效期：<span style="${expiryStyle}">${expiryStr}</span></div>
             <div style="font-size:12px; color:#999">目前存量：<b style="color:var(--primary); font-size:16px;">${item.currentStock}</b></div>
           </div>
           <div class="stock-tag" style="background:${item.currentStock <= item.safeStock ? 'var(--accent)' : 'var(--secondary)'}">
@@ -248,7 +276,7 @@
           </div>
         </div>`;
     }).join('');
-  }
+}
 
   function showToast(msg) {
     const t = document.getElementById("toast");
@@ -371,8 +399,8 @@ function clearPurchaseForm() {
       const json = await res.json();
       
       body.innerHTML = json.data.map(d => {
-        const dateStr = d.date ? d.date.substring(0, 10) : '無';
-        const expiryStr = d.expiry ? d.expiry.substring(0, 10) : '無';
+const dateStr = d.date ? d.date.substring(0, 10) : '無';
+const expiryStr = d.expiry ? d.expiry.substring(0, 10) : '無';
         const detailLabel = type === 'purchase' ? 
           `<i class="fa-solid fa-hourglass-half"></i> 效期: ${expiryStr}` : 
           `<i class="fa-regular fa-calendar-check"></i> ${dateStr}`;
