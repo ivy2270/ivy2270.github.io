@@ -1,4 +1,4 @@
-const CACHE_NAME = '物研所-v1';
+const CACHE_NAME = '物研所-v2';
 const urlsToCache = [
   './',
   './index.html',
@@ -15,4 +15,5 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(response => response || fetch(event.request))
   );
+
 });
