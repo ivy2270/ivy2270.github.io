@@ -150,23 +150,26 @@
 <div id="lightbox" onclick="this.style.display='none'"><img id="lightboxImg"></div>
 
 <script>
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbze99wKzNe8vLHcwODUrlSJf_jbbZD7eNp7rt9FBsuooz-C71yVsdO1RfH2UiXoN9AR/exec"; 
+  // 請確認更換為你最新的部署 URL
+  const GAS_URL = "https://script.google.com/macros/s/AKfycby7GcMMd5e1ImJBehbUC0eeAQe_k-zEy7gczF0ga6q09h07-E1u6Fsd-UQWtKjU4f9Avg/exec"; 
   
   let localCache = { inventory: [], batches: {}, lastUpdate: null };
   let currentWebpBase64 = "";
 
-  // 初始化
   window.onload = () => {
-    // 修正時差：獲取在地正確的 YYYY-MM-DD
+    resetPurchaseDate();
+    initAllData();
+  };
+
+  // 重置進貨日期為今天
+  function resetPurchaseDate() {
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
     document.getElementById('pDate').value = `${y}-${m}-${d}`;
-    initAllData();
-  };
+  }
 
-  // 同步雲端資料
   async function initAllData(isRefresh = false) {
     if(!isRefresh) document.getElementById('status').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在同步雲端資料...';
     try {
@@ -189,7 +192,6 @@
     }
   }
 
-  // 預加載圖片與效期，防止破圖
   async function preloadAllBatches() {
     const categories = localCache.inventory.map(i => i.category);
     await Promise.all(categories.map(cat => getBatchWithCache(cat)));
@@ -213,7 +215,6 @@
     if(mode === 'usage') updateBatchPreview();
   }
 
-  // 更新領用預覽卡片
   async function updateBatchPreview() {
     const category = document.getElementById('uCategory').value;
     const data = await getBatchWithCache(category);
@@ -221,14 +222,12 @@
     if (data) {
       document.getElementById('uPreviewImg').src = data.imgId || 'https://via.placeholder.com/100?text=No+Img';
       document.getElementById('uPreviewName').innerText = data.name || category;
-      // 處理日期字串截斷
       document.getElementById('uPreviewExpiry').innerText = data.expiry ? data.expiry.substring(0,10) : '無';
       document.getElementById('uPreviewRemain').innerText = data.remain;
       box.style.display = 'block';
     } else { box.style.display = 'none'; }
   }
 
-  // 渲染庫存清單 (包含破圖修正與效期顯示)
   function renderInventory() {
     const listDiv = document.getElementById('inventoryList');
     listDiv.innerHTML = localCache.inventory.map(item => {
@@ -258,7 +257,6 @@
     setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
   }
 
-  // 確認領用
   async function submitUsage() {
     const btn = document.getElementById('btnU');
     btn.disabled = true;
@@ -266,12 +264,38 @@
       const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "deduct", category: document.getElementById('uCategory').value, amount: document.getElementById('uQty').value })});
       const result = await res.json();
       showToast(result.message);
+      document.getElementById('uQty').value = 1; // 領用後數量重置為 1
       localCache.batches = {}; 
       await initAllData(true);
     } finally { btn.disabled = false; }
   }
 
-  // 確認入庫
+function clearPurchaseForm() {
+  // --- 1. 執行清空的欄位 ---
+  document.getElementById('pName').value = "";   // 詳細名稱清空
+  document.getElementById('pQty').value = "";    // 數量清空
+  
+  // --- 2. 徹底重置照片與內部變數 ---
+  document.getElementById('pImgFile').value = ""; // 檔案選擇器路徑重置
+  currentWebpBase64 = "";                         // 圖片變數清空
+  document.getElementById('imgStatus').innerHTML = '<i class="fa-solid fa-circle-question"></i> 尚未拍照';
+  
+  // --- 3. 保留不變的欄位 ---
+  // pCategory (品項) 不動
+  // pDate (進貨日) 不動
+  // pExpiry (效期) 不動，讓使用者可以連續輸入同效期的產品
+  
+  // --- 4. 視覺反饋：讓保留的欄位輕微閃爍 ---
+  const stayFields = ['pCategory', 'pExpiry'];
+  stayFields.forEach(id => {
+    const el = document.getElementById(id);
+    el.style.transition = "background 0.3s";
+    el.style.background = "#FBDE81"; // 變成次要黃色
+    setTimeout(() => {
+      el.style.background = "#FAFAFA"; // 變回原色
+    }, 300);
+  });
+}
   async function submitPurchase() {
     const btn = document.getElementById('btnP');
     const payload = {
@@ -283,27 +307,35 @@
       expiry: document.getElementById('pExpiry').value, 
       imageBlob: currentWebpBase64
     };
+    
     if(!payload.amount || !payload.expiry) return showToast("請填寫數量與效期");
+    
     btn.disabled = true;
+    document.getElementById('status').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 資料傳送中...';
+    
     try {
       const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
       const result = await res.json();
       showToast(result.message);
+      
+      // 成功後執行表單清理
+      clearPurchaseForm();
+      
       localCache.batches = {};
       await initAllData(true);
-      document.getElementById('pName').value = ""; document.getElementById('pQty').value = "";
-      document.getElementById('imgStatus').innerHTML = '<i class="fa-solid fa-circle-question"></i> 尚未拍照'; currentWebpBase64 = "";
-    } finally { btn.disabled = false; }
+    } catch(e) {
+      showToast("傳送失敗，請稍後再試");
+    } finally { 
+      btn.disabled = false; 
+    }
   }
 
-  // 燈箱放大
   function zoomImg(src) {
     if(!src || src.includes('placeholder')) return;
     document.getElementById('lightboxImg').src = src;
     document.getElementById('lightbox').style.display = 'flex';
   }
 
-  // 處理照片上傳與壓縮
   function handleImageUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -327,7 +359,6 @@
     reader.readAsDataURL(file);
   }
 
-  // 打開歷史紀錄彈窗 (包含進貨效期顯示)
   async function openModal(type) {
     const modal = document.getElementById('recordModal');
     const body = document.getElementById('modalBody');
@@ -340,11 +371,8 @@
       const json = await res.json();
       
       body.innerHTML = json.data.map(d => {
-        // 修正日期顯示
         const dateStr = d.date ? d.date.substring(0, 10) : '無';
         const expiryStr = d.expiry ? d.expiry.substring(0, 10) : '無';
-        
-        // 進貨歷史顯示效期，領用歷史顯示領用日
         const detailLabel = type === 'purchase' ? 
           `<i class="fa-solid fa-hourglass-half"></i> 效期: ${expiryStr}` : 
           `<i class="fa-regular fa-calendar-check"></i> ${dateStr}`;
@@ -365,14 +393,5 @@
 
   function closeModal() { document.getElementById('recordModal').style.display = 'none'; }
 </script>
-
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js');
-    });
-  }
-</script>
-
 </body>
 </html>
