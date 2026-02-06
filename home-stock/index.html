@@ -170,8 +170,13 @@
     document.getElementById('pDate').value = `${y}-${m}-${d}`;
   }
 
-  async function initAllData(isRefresh = false) {
+async function initAllData(isRefresh = false) {
     if(!isRefresh) document.getElementById('status').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在同步雲端資料...';
+    
+    // --- 新增：先記住目前進貨頁面選了什麼 ---
+    const currentPCat = document.getElementById('pCategory').value;
+    const currentUCat = document.getElementById('uCategory').value;
+
     try {
       const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getCategoryList" }) });
       const json = await res.json();
@@ -179,8 +184,16 @@
         localCache.inventory = json.data;
         localCache.lastUpdate = new Date();
         const options = localCache.inventory.map(c => `<option value="${c.category}">${c.category}</option>`).join('');
+        
         document.getElementById('uCategory').innerHTML = options;
         document.getElementById('pCategory').innerHTML = options;
+
+        // --- 新增：將剛才記住的選項填回去 (如果該類別還存在的話) ---
+        if (isRefresh) {
+          if (currentPCat) document.getElementById('pCategory').value = currentPCat;
+          if (currentUCat) document.getElementById('uCategory').value = currentUCat;
+        }
+
         await preloadAllBatches();
         document.getElementById('status').innerHTML = '<i class="fa-solid fa-circle-check"></i> 同步完成 (' + localCache.lastUpdate.toLocaleTimeString() + ')';
         updateBatchPreview(); 
@@ -190,7 +203,7 @@
       document.getElementById('status').innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> 同步失敗';
       showToast("連線失敗，請檢查網路");
     }
-  }
+}
 
   async function preloadAllBatches() {
     const categories = localCache.inventory.map(i => i.category);
