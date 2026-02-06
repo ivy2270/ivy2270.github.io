@@ -1,0 +1,590 @@
+/* --- 1. 字體與基礎設定 --- */
+@font-face {
+    font-family: 'OpenHuninn';
+    src: url('https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --primary: #ffb7b2;    /* 粉紅 */
+    --secondary: #b2e2f2;  /* 嫩藍 */
+    --accent: #ffdac1;     /* 橘黃 */
+    --bg: #fff9f9;
+    --text: #5d5d5d;
+    --white: #ffffff;
+    --danger: #ff7675;
+}
+
+/* 強制套用字體並移除預設邊距 */
+body, input, select, textarea, button {
+    font-family: 'OpenHuninn', 'Noto Sans TC', sans-serif !important;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* 防止左右晃動 */
+}
+
+h2, h3, strong {
+    font-weight: 700;
+}
+
+h2 {
+    text-align: center;
+    color: var(--primary);
+    padding: 20px 0;
+    margin: 0;
+}
+
+/* --- 2. 佈局核心 (修正捲軸與手勢區域) --- */
+#app {
+    min-height: 100dvh; /* 動態視窗高度，防止行動裝置網址列擠壓 */
+    display: flex;
+    flex-direction: column;
+    touch-action: pan-y; /* 鎖定水平捲動，交給 JS 處理分頁切換 */
+    box-sizing: border-box;
+}
+
+.container {
+    flex: 1; /* 讓容器自動撐開 */
+    padding: 15px;
+    padding-bottom: 90px; /* 為底部導覽與 FAB 預留空間 */
+    max-width: 500px;
+    margin: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* --- 3. 元件樣式 --- */
+.card {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 15px rgba(255, 183, 178, 0.2);
+}
+
+/* 列表品項 */
+.log-item {
+    transition: transform 0.1s;
+    cursor: pointer;
+}
+
+.thumb-box {
+    width: 50px; 
+    height: 50px;  
+    border-radius: 10px;  
+    margin-right: 12px;  
+    overflow: hidden;
+    background: #f0f0f0;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.thumb-placeholder {
+    font-size: 24px;
+}
+
+/* 標籤樣式 */
+.tag {
+    background: var(--secondary);
+    color: #4a90a4;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+}
+
+/* --- 4. 導航與浮動按鈕 (已整合 Font Awesome 與層級修正) --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    max-width: 500px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--white);
+    display: flex;
+    justify-content: space-around;
+    align-items: center; /* 垂直置中 */
+    /* 底部預留安全距離並考慮 iPhone 底部橫條 */
+    padding: 10px 0 calc(15px + env(safe-area-inset-bottom)); 
+    border-radius: 25px 25px 0 0;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
+    z-index: 1000; /* 提升層級 */
+    border-top: 1px solid #f0f0f0;
+}
+
+.nav-item {
+    text-align: center;
+    color: #ccc; /* 預設灰色 */
+    cursor: pointer;
+    flex: 1;
+    transition: all 0.3s ease;
+}
+
+/* 圖示專屬樣式 */
+.nav-item i {
+    font-size: 22px; /* Font Awesome 圖示大小 */
+    margin-bottom: 4px;
+    display: block;
+}
+
+.nav-item div {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* 選中狀態：顏色變亮 */
+.nav-item.active {
+    color: var(--primary);
+}
+
+.nav-item.active i {
+    transform: translateY(-3px); /* 選中時微調上浮 */
+}
+
+/* 修改名稱為 .add-btn 避免與 Font Awesome 衝突 */
+.add-btn {
+    position: fixed;
+    right: 25px;
+    bottom: calc(100px + env(safe-area-inset-bottom)); 
+    width: 60px;
+    height: 60px;
+    background: var(--primary);
+    border-radius: 50%;
+    
+    /* 核心置中設定 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    color: white;
+    border: none; 
+    box-shadow: 0 6px 16px rgba(255, 183, 178, 0.6);
+    z-index: 999;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+/* 圖示本身的大小與對齊 */
+.add-btn i {
+    font-size: 24px;
+    /* 確保圖示不繼承任何怪異的行高或字體 */
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 900;
+}
+
+/* 點擊縮放效果 */
+.add-btn:active {
+    transform: scale(0.9);
+}
+
+/* --- 5. 彈窗與輸入框 --- */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center; /* 垂直置中 */
+    justify-content: center;
+    /* 確保 z-index 高於 bottom-nav (1000) */
+    z-index: 2000; 
+    /* 稍微往上偏移一點點，讓視覺重心避開底欄 */
+    padding-bottom: 60px; 
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 25px;
+    padding: 20px;
+    
+    /* 增加底部 Padding，確保取消按鈕下方有呼吸空間 */
+    padding-bottom: 35px; 
+    
+    /* 修正最大高度，預留更多空間給底部的導覽列與 FAB */
+    max-height: 80vh; 
+    overflow-y: auto;
+    
+    /* 確保在彈窗出現時，陰影不會被切掉 */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 2px solid var(--accent);
+    border-radius: 15px;
+    box-sizing: border-box;
+    font-size: 16px; /* 防止 iOS 縮放 */
+}
+
+.btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 15px;
+    width: 100%;
+    font-weight: bold;
+    margin-top: 15px;
+}
+
+.btn-danger { background: var(--danger); margin-top: 10px; }
+/* 針對彈窗內最後一個按鈕（取消按鈕）增加下邊距，雙重保險 */
+.btn-cancel {
+    background: #ccc;
+    margin-top: 5px;
+    margin-bottom: 10px; 
+}
+
+/* 分類網格 */
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.cat-btn {
+    padding: 10px;
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    background: white;
+    text-align: center;
+    font-size: 14px;
+}
+
+.cat-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.sub-category-box {
+    background: #fff9f9; 
+    padding: 10px; 
+    border-radius: 15px; 
+    margin-bottom: 10px; 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 8px;
+}
+
+.cat-btn-sub {
+    padding: 6px 12px; 
+    border: 1px solid var(--primary); 
+    border-radius: 20px;
+    font-size: 13px; 
+    background: white;
+}
+
+.cat-btn-sub.active { 
+    background: var(--primary); 
+    color: white; 
+}
+
+/* --- 6. 設定頁面專用 --- */
+.setting-row {
+    background: #fff;
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.move-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.move-btns button {
+    width: 24px;
+    height: 18px;
+    font-size: 10px;
+    padding: 0;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 4px;
+    color: #888;
+}
+
+.btn-small { background: #f0f0f0; border: none; padding: 8px 15px; border-radius: 10px; font-size: 12px; margin: 10px 0; }
+.btn-del-circle { background: var(--primary); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; }
+
+/* --- 7. 動畫與交互 --- */
+.btn, .cat-btn, .cat-btn-sub, .nav-item, .fab, .btn-del-circle, .log-item {
+    transition: transform 0.1s ease, opacity 0.2s;
+    user-select: none;
+}
+
+.btn:active, .cat-btn:active, .cat-btn-sub:active, .nav-item:active, .fab:active, .log-item:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
+/* Loading 旋轉 */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 5px;
+}
+
+/* --- 8. 其他功能樣式 --- */
+.lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95); /* 深一點顏色更有沉浸感 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    overflow: hidden; 
+    touch-action: none; /* 禁用瀏覽器默認行為 */
+}
+
+.lightbox img {
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    will-change: transform;
+    transition: transform 0.05s linear; /* 極短的延遲讓跟隨感更平滑 */
+}
+
+/* 關閉按鈕：固定在螢幕右上角 */
+.close-btn {
+    position: absolute;
+    top: 25px;      /* 距離頂部 25px */
+    right: 25px;    /* 距離右側 25px */
+    width: 44px;    /* 增加觸控面積，適合手機操作 */
+    height: 44px;
+    background: rgba(255, 255, 255, 0.2); /* 半透明背景 */
+    border: none;
+    border-radius: 50%; /* 圓形按鈕 */
+    color: white;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10001; /* 確保在圖片之上 */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    backdrop-filter: blur(5px); /* 毛玻璃效果，更有質感 */
+}
+
+/* 點擊按鈕時的反饋 */
+.close-btn:active {
+    transform: scale(0.9);
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.btn-del-img {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(255, 118, 117, 0.9);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+}
+
+/* Toast */
+.toast-overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3000;
+}
+
+.toast-box {
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* --- 9. Vue 特殊類別 --- */
+[v-cloak] { display: none; }
+
+/* 分頁切換動畫 (修正為左右滑動感) */
+.tab-content-fade-enter-active, .tab-content-fade-leave-active {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tab-content-fade-enter-from {
+    opacity: 0;
+    transform: translateX(30px);
+}
+
+.tab-content-fade-leave-to {
+    opacity: 0;
+    transform: translateX(-30px);
+}
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.4s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* 圖表畫布適配 */
+#myChart {
+    max-width: 100% !important;
+    max-height: 100% !important;
+}
+
+/* 統計頁面日期選單容器優化 */
+div[v-if="activeTab === 'chart'"] .card > div:first-child {
+    display: flex;
+    flex-wrap: nowrap; /* 強制不換行 */
+    gap: 5px !important; /* 縮小間距 */
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* 針對日期輸入框的寬度微調 */
+.date-input {
+    flex: 1; /* 讓兩個輸入框平分剩餘空間 */
+    min-width: 0; /* 允許縮小到比預設更小 */
+    padding: 8px 5px !important; /* 減少內部左右邊距 */
+    font-size: 14px !important; /* 稍微縮小字體以騰出空間 */
+    margin: 0 !important; /* 移除外距避免推擠 */
+    text-align: center;
+}
+
+/* 如果中間那個「至」字太佔空間，也稍微縮小它 */
+div[v-if="activeTab === 'chart'"] .card {
+    font-size: 14px;
+}
+
+/* --- 新增：篩選器樣式 --- */
+.filter-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #fff;
+    border-radius: 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(255, 183, 178, 0.15);
+}
+
+.filter-summary {
+    font-size: 13px;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-summary i {
+    color: var(--primary);
+}
+
+.filter-toggle-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.filter-toggle-btn.active {
+    background: #ff7675;
+    transform: rotate(90deg);
+}
+
+.filter-panel {
+    background: #fff;
+    border-radius: 18px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1.5px solid var(--accent);
+    overflow: hidden;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.filter-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-input-group label {
+    font-size: 11px;
+    color: #aaa;
+    font-weight: bold;
+    margin-left: 4px;
+}
+
+.filter-panel input, .filter-panel select {
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    font-size: 14px;
+    background: #fdfdfd;
+    margin: 0; /* 覆蓋原有 margin */
+}
+
+.full-width {
+    grid-column: span 2;
+}
+
+/* 面板展開動畫 */
+.slide-fade-enter-active, .slide-fade-leave-active {
+    transition: all 0.3s ease;
+    max-height: 400px;
+}
+.slide-fade-enter-from, .slide-fade-leave-to {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
