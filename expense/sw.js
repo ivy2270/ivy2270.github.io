@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v3_cache';
+const CACHE_NAME = 'v4_cache';
 const urlsToCache = [
   './',
   './index.html', // 換成你的 html 檔名
@@ -24,4 +24,5 @@ self.addEventListener('fetch', event => {
   );
 
 });
+
 
