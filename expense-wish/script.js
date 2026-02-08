@@ -118,39 +118,36 @@ createApp({
             const data = await res.json();
             this.categoryData = data.categories.map(c => ({...c, subRaw: Array.isArray(c.subs)?c.subs.join(','):c.subs}));
             this.payments = data.payments;
-this.wishes = data.wishList.map(w => {
-    const d = w.達成日期 ? new Date(w.達成日期) : null;
-    return {
-        ...w,
-        達成日期: d ? `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}` : ''
-    };
-});
+            this.wishes = data.wishList.map(w => {
+                const d = w.達成日期 ? new Date(w.達成日期) : null;
+                return {
+                    ...w,
+                    達成日期: d ? `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}` : ''
+                };
+            });
             
             const now = new Date();
             this.filter.start = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
             this.filter.end = this.getISODate(now);
             await this.fetchLogs();
         },
-async fetchLogs() {
-    const res = await fetch(`${GAS_URL}?action=getLogs`);
-    const data = await res.json();
-    this.logs = data.map(l => {
-        // 使用 Date 物件轉換，自動處理時區
-        const d = new Date(l.日期);
-        const y = d.getFullYear();
-        const m = d.getMonth() + 1;
-        const date = d.getDate();
-        
-        return {
-            ...l,
-            imageUrl: l.圖片ID ? `https://drive.google.com/thumbnail?id=${l.圖片ID}&sz=s800` : null,
-            // 修正：用 local 時間拼湊日期文字，避開 split('T') 導致的減一天
-            displayDate: `${y}/${m}/${date}`,
-            // 修正：確保無論後端傳回願望ID還是wishId，這裡都能抓到
-            relWishId: (l['關聯願望ID'] || l.願望ID || l.wishId || "").toString().trim()
-        };
-    });
-},
+        async fetchLogs() {
+            const res = await fetch(`${GAS_URL}?action=getLogs`);
+            const data = await res.json();
+            this.logs = data.map(l => {
+                const d = new Date(l.日期);
+                const y = d.getFullYear();
+                const m = d.getMonth() + 1;
+                const date = d.getDate();
+                
+                return {
+                    ...l,
+                    imageUrl: l.圖片ID ? `https://drive.google.com/thumbnail?id=${l.圖片ID}&sz=s800` : null,
+                    displayDate: `${y}/${m}/${date}`,
+                    relWishId: (l['關聯願望ID'] || l.願望ID || l.wishId || "").toString().trim()
+                };
+            });
+        },
         getISODate(d) { const date = new Date(d); return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`; },
         getTabIcon(tab) { return { list:'fa-solid fa-database', income:'fa-solid fa-piggy-bank', chart:'fa-solid fa-chart-pie', wish:'fa-solid fa-star', settings:'fa-solid fa-gear' }[tab]; },
         getTabName(tab) { return { list:'支出', income:'收入', chart:'統計', wish:'許願', settings:'設定' }[tab]; },
@@ -186,15 +183,15 @@ async fetchLogs() {
             if(cats.length > 0) this.selectMainCategory(cats[0].main);
             this.showAddModal = true;
         },
-editLog(log) {
-    if (!this.isEditMode) return;
-    const d = new Date(log.日期);
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    
-    this.form = { 
-        id: log.ID,
-        type: log.類型,
-        date: dateStr, // 確保格式為 YYYY-MM-DD
+        editLog(log) {
+            if (!this.isEditMode) return;
+            const d = new Date(log.日期);
+            const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            
+            this.form = { 
+                id: log.ID,
+                type: log.類型,
+                date: dateStr, 
                 item: log.品項,
                 amount: log.金額,
                 mainCategory: log.大分類,
@@ -239,13 +236,52 @@ editLog(log) {
             this.showToast("✅ 已刪除");
         },
         
-        // 圖片處理
-        handleFileUpload(e) {
+        // 圖片壓縮核心函式 (WebP)
+        async compressToWebP(file, maxWidth = 800) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = (maxWidth / width) * height;
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // 轉為 WebP 格式，品質設為 0.8
+                        const webpBase64 = canvas.toDataURL('image/webp', 0.8);
+                        resolve(webpBase64);
+                    };
+                    img.onerror = reject;
+                };
+                reader.onerror = reject;
+            });
+        },
+
+        // 圖片處理 - 收支明細
+        async handleFileUpload(e) {
             const file = e.target.files[0];
             if(!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => this.form.imageData = ev.target.result;
-            reader.readAsDataURL(file);
+            this.showToast("處理圖片中...");
+            try {
+                const webpData = await this.compressToWebP(file);
+                this.form.imageData = webpData;
+                this.form.imageUrl = webpData; 
+                this.showToast("圖片已壓縮");
+            } catch (err) {
+                this.showToast("圖片處理失敗");
+            }
         },
         clearImage() { 
             this.form.imageData = ''; 
@@ -279,12 +315,19 @@ editLog(log) {
             };
             this.showWishModal = true;
         },
-        handleWishFileUpload(e) {
+        // 圖片處理 - 許願清單
+        async handleWishFileUpload(e) {
             const file = e.target.files[0];
             if(!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => this.wishForm.imageData = ev.target.result;
-            reader.readAsDataURL(file);
+            this.showToast("處理圖片中...");
+            try {
+                const webpData = await this.compressToWebP(file);
+                this.wishForm.imageData = webpData;
+                this.wishForm.imageUrl = webpData;
+                this.showToast("圖片已壓縮");
+            } catch (err) {
+                this.showToast("圖片處理失敗");
+            }
         },
         clearWishImage() {
             this.wishForm.imageData = '';
@@ -306,7 +349,7 @@ editLog(log) {
                 note: this.wishForm.note,
                 imageData: this.wishForm.imageData,
                 imgId: this.wishForm.imgId,
-                createdTime: this.wishForm.createdTime, // 保留原建立時間（編輯時）
+                createdTime: this.wishForm.createdTime, 
                 currentMoney: this.wishForm.wishId ? this.wishes.find(w => w.願望ID === this.wishForm.wishId)?.['目前金額 (錢)'] : 0,
                 currentPoints: this.wishForm.wishId ? this.wishes.find(w => w.願望ID === this.wishForm.wishId)?.['目前點數 (點)'] : 0
             };
@@ -349,7 +392,7 @@ editLog(log) {
                     target: wish.目標金額, 
                     currentMoney: wish['目前金額 (錢)'],
                     currentPoints: wish['目前點數 (點)'],
-                    status: '成就館',  // 改為成就館
+                    status: '成就館',  
                     note: wish.備註,
                     achievedDate: achievedDate,
                     imgId: wish.圖片ID,
@@ -392,18 +435,15 @@ editLog(log) {
         toggleAchievementDetail(wishId) {
             this.expandedAchievement = this.expandedAchievement === wishId ? null : wishId;
         },
-// 在 script01.js 內
-getWishLogs(wishId) {
-    if (!wishId) return [];
-    // 確保要搜尋的 ID 是乾淨的字串
-    const searchId = wishId.toString().trim();
-    
-    return this.logs.filter(l => {
-        // 確保紀錄裡的 ID 也是乾淨的字串
-        const logWishId = (l.relWishId || "").toString().trim();
-        return logWishId === searchId;
-    }).reverse();
-},
+        getWishLogs(wishId) {
+            if (!wishId) return [];
+            const searchId = wishId.toString().trim();
+            
+            return this.logs.filter(l => {
+                const logWishId = (l.relWishId || "").toString().trim();
+                return logWishId === searchId;
+            }).reverse();
+        },
 
         // 設定與分類
         async saveSettings() {
