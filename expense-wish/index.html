@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>微時記帳 - 夢想存錢筒</title>
+    <link rel="icon" type="image/svg+xml" href="piggy-bank.svg">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="微時記帳">
+<link rel="apple-touch-icon" href="piggy-bank.png">
+
+<meta name="theme-color" content="#bae3f9">
+</head>
+<body>
+    <div id="app" v-cloak>
+        <header class="main-header" :class="{'income-theme': activeTab === 'income'}">
+            <div class="balance-card" v-if="activeTab !== 'settings'">
+                <span class="label"><i class="fa-solid fa-wallet"></i> 當前餘額</span>
+                <span class="amount">$ {{ totalBalance }}</span>
+            </div>
+            <h2 class="page-title">
+                {{ currentTabTitle }}
+                <span v-if="!isEditMode" class="readonly-badge"><i class="fa-solid fa-eye"></i> 唯讀模式</span>
+            </h2>
+        </header>
+
+        <main class="content-area">
+            <div v-if="activeTab === 'list' || activeTab === 'income'" class="tab-pane">
+                <div class="filter-bar" @click="showFilterPanel = !showFilterPanel">
+                    <i class="fa-solid fa-filter"></i>
+                    <span class="date-range">{{ filter.start }} ~ {{ filter.end }}</span>
+                    <div class="filter-toggle" :class="{active: showFilterPanel}"><i class="fa-solid fa-chevron-right"></i></div>
+                </div>
+
+                <transition name="expand">
+                    <div v-if="showFilterPanel" class="filter-panel">
+                        <div class="filter-grid">
+                            <div class="f-group"><label>開始</label><input type="date" v-model="filter.start"></div>
+                            <div class="f-group"><label>結束</label><input type="date" v-model="filter.end"></div>
+                            <div class="f-group full"><label>關鍵字</label><input type="text" v-model="filter.keyword" placeholder="搜尋品項"></div>
+                        </div>
+                    </div>
+                </transition>
+
+                <div class="log-container">
+                    <div v-for="log in processedLogs" :key="log.ID" class="log-card" @click="isEditMode && editLog(log)">
+                        <div class="log-icon-box">
+                            <img v-if="log.imageUrl" :src="log.imageUrl" @click.stop="openLightbox(log.imageUrl)">
+                            <i v-else :class="log.類型 === '收入' ? 'fa-solid fa-piggy-bank' : 'fa-solid fa-sack-dollar'"></i>
+                        </div>
+                        <div class="log-details">
+                            <div class="log-row">
+                                <span class="log-name">{{ log.品項 }}</span>
+                                <span class="log-val" :class="log.類型 === '收入' ? 'inc' : 'exp'">{{ log.類型 === '收入' ? '+' : '-' }} {{ log.金額 }}</span>
+                            </div>
+                            <div class="log-meta">
+                                <span>{{ log.displayDate }} · {{ log.大分類 }}</span>
+                                <span v-if="log.付款方式" class="pay-tag">{{ log.付款方式 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="processedLogs.length === 0" class="empty-state">沒有符合條件的紀錄</div>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'chart'" class="tab-pane chart-pane">
+                <div class="chart-box">
+                    <div class="chart-filter">
+                         <input type="date" v-model="filter.start"> 至 <input type="date" v-model="filter.end">
+                    </div>
+                    <div class="chart-type-btns">
+                        <button :class="{active: chartType === '支出'}" @click="chartType = '支出'">支出</button>
+                        <button :class="{active: chartType === '收入'}" @click="chartType = '收入'">收入</button>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="myChart"></canvas>
+                    </div>
+                    <div class="chart-total">
+                        總計：<span>${{ chartTotal }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'wish'" class="tab-pane">
+                <div class="achievement-btn-container">
+                    <button class="btn-achievement" @click="showAchievementModal = true">
+                        <i class="fa-solid fa-trophy"></i> 成就館 ({{ achievementCount }})
+                    </button>
+                </div>
+
+                <div class="wish-list">
+                    <div v-for="wish in sortedWishes" :key="wish.願望ID" class="wish-item" :class="{done: wish.狀態 === '成就館'}">
+                        <div class="wish-banner" @click.stop="wish.圖片ID && openLightbox(`https://drive.google.com/thumbnail?id=${wish.圖片ID}&sz=s500`)">
+                            <img v-if="wish.圖片ID" :src="`https://drive.google.com/thumbnail?id=${wish.圖片ID}&sz=s500`" alt="wish">
+                            <i v-else class="fa-solid fa-gift"></i>
+                            <div class="wish-tag">{{ wish.狀態 }}</div>
+                        </div>
+                        <div class="wish-content" @click="isEditMode && editWish(wish)">
+                            <h3>{{ wish.願望名稱 }}</h3>
+                            <div class="progress-container">
+                                <div class="progress-text">
+                                    <span>進度 {{ getWishPercent(wish) }}%</span>
+                                    <span>${{ getWishTotal(wish) }} / {{ wish.目標金額 }}</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="bar bar-money" :style="{width: getWishMoneyBar(wish) + '%'}"></div>
+                                    <div class="bar bar-points" :style="{left: getWishMoneyBar(wish) + '%', width: getWishPointBar(wish) + '%'}"></div>
+                                </div>
+                                <div class="progress-legend">
+                                    <span><i class="dot money"></i>存錢</span>
+                                    <span><i class="dot point"></i>點數</span>
+                                </div>
+                            </div>
+                            <div class="wish-btns" v-if="isEditMode">
+                                <button v-if="wish.狀態 === '進行中' && getWishPercent(wish) >= 100" 
+                                        class="btn-complete" @click.stop="completeWish(wish)">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> 達成願望
+                                </button>
+                                
+                                <template v-else-if="wish.狀態 === '進行中'">
+                                    <button @click.stop="openDepositModal(wish, 'money')" class="btn-save"><i class="fa-solid fa-piggy-bank"></i> 存錢</button>
+                                    <button @click.stop="openDepositModal(wish, 'points')" class="btn-star"><i class="fa-solid fa-star"></i> 獎勵</button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'settings'" class="tab-pane settings-pane">
+                <div v-if="!isEditMode" class="readonly-notice">
+                    <i class="fa-solid fa-lock"></i>
+                    <p>唯讀模式無法修改設定</p>
+                </div>
+                <template v-else>
+                    <div class="config-section">
+                        <h3><i class="fa-solid fa-folder-open"></i> 分類管理</h3>
+                        <div v-for="(cat, idx) in categoryData" :key="idx" class="config-row">
+                            <select v-model="cat.type" class="type-select" :class="cat.type === '收入' ? 'inc' : 'exp'">
+                                <option value="支出">支出</option>
+                                <option value="收入">收入</option>
+                                <option value="點數獎勵">點數獎勵</option>
+                            </select>
+                            <input v-model="cat.main" class="input-main" placeholder="大分類">
+                            <input v-model="cat.subRaw" class="input-sub" placeholder="小分類(逗號隔開)">
+                            <div class="action-btns">
+                                <button class="icon-btn" @click="moveItem(categoryData, idx, -1)"><i class="fa-solid fa-arrow-up"></i></button>
+                                <button class="icon-btn" @click="moveItem(categoryData, idx, 1)"><i class="fa-solid fa-arrow-down"></i></button>
+                                <button class="icon-btn del" @click="categoryData.splice(idx,1)"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <button class="btn-add-line" @click="categoryData.push({type:'支出',main:'',subRaw:''})"><i class="fa-solid fa-plus"></i> 新增分類</button>
+                    </div>
+
+                    <div class="config-section" style="margin-top: 30px;">
+                        <h3><i class="fa-solid fa-credit-card"></i> 付款方式</h3>
+                        <div v-for="(pay, idx) in payments" :key="idx" class="payment-row">
+                            <input v-model="payments[idx]" class="input-payment" placeholder="付款方式名稱">
+                            <button class="icon-btn del" @click="payments.splice(idx,1)"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <button class="btn-add-line" @click="payments.push('')"><i class="fa-solid fa-plus"></i> 新增付款方式</button>
+                    </div>
+
+                    <button class="btn-submit-all" @click="saveSettings">儲存所有設定</button>
+                </template>
+            </div>
+        </main>
+
+        <div v-if="showAddModal" class="modal-mask" @click.self="showAddModal = false">
+            <div class="modal-body">
+                <div class="modal-head">
+                    <h3>{{ form.id ? (form.type === '收入' ? '編輯收入' : '編輯支出') : (form.type === '收入' ? '新增收入' : '新增支出') }}</h3>
+                </div>
+                <div class="modal-form">
+                    <div class="f-group full">
+                        <label>類型</label>
+                        <select v-model="form.type" disabled>
+                            <option value="支出">支出</option>
+                            <option value="收入">收入</option>
+                        </select>
+                    </div>
+                    
+                    <div class="f-group full">
+                        <label>大分類</label>
+                        <div class="tag-container">
+                            <div v-for="c in filteredCategoriesForForm" :key="c.main" 
+                                 class="tag-btn" :class="{active: form.mainCategory === c.main}"
+                                 @click="selectMainCategory(c.main)">
+                                {{ c.main }}
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="form.mainCategory" class="f-group full">
+                        <label>小分類</label>
+                        <div class="tag-container sub">
+                            <div v-for="s in getSubCategories(form.mainCategory)" :key="s"
+                                 class="tag-btn sub" :class="{active: form.subCategory === s}"
+                                 @click="form.subCategory = s">
+                                {{ s }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="f-group"><label>日期</label><input type="date" v-model="form.date"></div>
+                        <div class="f-group"><label>金額</label><input type="number" v-model="form.amount" placeholder="0"></div>
+                    </div>
+                    
+                    <div class="f-group full"><label>品項</label><input type="text" v-model="form.item" placeholder="輸入名稱"></div>
+                    
+                    <div v-if="form.type === '支出'" class="f-group full">
+                        <label>付款方式</label>
+                        <div class="tag-container">
+                            <div v-for="p in payments" :key="p" class="tag-btn pay" 
+                                 :class="{active: form.payment === p}" @click="form.payment = p">
+                                {{ p }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="f-group full"><label>備註</label><input type="text" v-model="form.note" placeholder="備註..."></div>
+
+                    <div v-if="form.type === '支出'" class="f-group full">
+                        <label>圖片</label>
+                        <div class="img-upload">
+                            <input type="file" @change="handleFileUpload" id="modalFile">
+                            <label for="modalFile">
+                                <i v-if="!form.imageData && !form.imageUrl" class="fa-solid fa-camera"></i>
+                                <img v-else :src="form.imageData || form.imageUrl" class="img-prev">
+                            </label>
+                            <button v-if="form.imageData || form.imageUrl" class="btn-clear-img" @click.stop="clearImage">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-btns">
+                    <button v-if="form.id" class="btn-del" @click="deleteLog(form.id)">刪除</button>
+                    <button class="btn-save" @click="submitLog">儲存</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showWishModal" class="modal-mask" @click.self="showWishModal = false">
+            <div class="modal-body">
+                <div class="modal-head">
+                    <h3>{{ wishForm.wishId ? '編輯願望' : '許個新願望' }}</h3>
+                </div>
+                <div class="modal-form">
+                    <div class="f-group full"><label>願望名稱</label><input type="text" v-model="wishForm.name"></div>
+                    <div class="f-group full"><label>目標金額</label><input type="number" v-model="wishForm.target"></div>
+                    
+                    <div class="f-group full" v-if="wishForm.wishId">
+                        <label>狀態</label>
+                        <select v-model="wishForm.status">
+                            <option value="進行中">進行中</option>
+                            <option value="成就館">成就館</option>
+                        </select>
+                    </div>
+
+                    <div class="f-group full"><label>備註</label><textarea v-model="wishForm.note" rows="2"></textarea></div>
+
+                    <div class="f-group full">
+                        <label>願望照片</label>
+                         <div class="img-upload">
+                            <input type="file" @change="handleWishFileUpload" id="wishFile">
+                            <label for="wishFile">
+                                <i v-if="!wishForm.imageData && !wishForm.imageUrl" class="fa-solid fa-camera"></i>
+                                <img v-else :src="wishForm.imageData || wishForm.imageUrl" class="img-prev">
+                            </label>
+                            <button v-if="wishForm.imageData || wishForm.imageUrl" class="btn-clear-img" @click.stop="clearWishImage">✕</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-btns">
+                    <button v-if="wishForm.wishId" class="btn-del" @click="deleteWish(wishForm.wishId)">刪除</button>
+                    <button class="btn-save" @click="submitWish">儲存</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showDepositModal" class="modal-mask" @click.self="showDepositModal = false">
+            <div class="modal-body">
+                <div class="modal-head">
+                    <h3><i :class="depositType === 'money' ? 'fa-solid fa-piggy-bank' : 'fa-solid fa-star'"></i> {{ depositType === 'money' ? '存入錢錢' : '給予獎勵' }}</h3>
+                </div>
+                <div class="modal-form">
+                    <div class="f-group full">
+                        <label>數值</label>
+                        <input type="number" v-model="depositAmount" placeholder="輸入數字">
+                    </div>
+                    <div class="f-group full">
+                        <label>備註</label>
+                        <input type="text" v-model="depositNote" placeholder="例如：幫忙做家事">
+                    </div>
+                </div>
+                <div class="modal-btns">
+                    <button class="btn-save" @click="submitDeposit">確定</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showAchievementModal" class="modal-mask" @click.self="showAchievementModal = false">
+            <div class="modal-body achievement-modal">
+                <div class="modal-head">
+                    <h3><i class="fa-solid fa-trophy"></i> 成就館</h3>
+                </div>
+                <div class="modal-form">
+                    <div v-if="achievementWishes.length === 0" class="empty-state">
+                        還沒有達成的願望
+                    </div>
+                    <div v-for="wish in achievementWishes" :key="wish.願望ID" class="achievement-item">
+                        <div class="achievement-header" @click="toggleAchievementDetail(wish.願望ID)">
+                            <div class="achievement-info">
+                                <h4>{{ wish.願望名稱 }}</h4>
+                                <p class="achievement-date">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    達成日期: {{ wish.達成日期 || '未記錄' }}
+                                </p>
+                            </div>
+                            <i class="fa-solid fa-chevron-down toggle-icon" 
+                               :class="{active: expandedAchievement === wish.願望ID}"></i>
+                        </div>
+                        
+                        <transition name="expand">
+                            <div v-if="expandedAchievement === wish.願望ID" class="achievement-details">
+                                <div class="achievement-summary">
+                                    <div class="summary-item">
+                                        <span class="label">目標金額</span>
+                                        <span class="value">${{ wish.目標金額 }}</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="label">實際存入</span>
+                                        <span class="value">${{ wish['目前金額 (錢)'] }}</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="label">獎勵點數</span>
+                                        <span class="value">{{ wish['目前點數 (點)'] }} 點</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="achievement-logs">
+                                    <h5>相關記錄</h5>
+                                    <div v-for="log in getWishLogs(wish.願望ID)" :key="log.ID" class="mini-log-card">
+                                        <div class="mini-log-info">
+                                            <span class="mini-log-date">{{ log.displayDate }}</span>
+                                            <span class="mini-log-item">{{ log.品項 }}</span>
+                                        </div>
+                                        <span class="mini-log-amount" :class="log.類型 === '點數獎勵' ? 'point' : 'money'">
+                                            {{ log.類型 === '點數獎勵' ? '+' : '' }}{{ log.金額 }}{{ log.類型 === '點數獎勵' ? '點' : '元' }}
+                                        </span>
+                                    </div>
+                                    <div v-if="getWishLogs(wish.願望ID).length === 0" class="empty-state-mini">
+                                        無相關記錄
+                                    </div>
+                                </div>
+                            </div>
+                        </transition>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="lightboxUrl" class="lightbox" @click.self="lightboxUrl = null">
+            <img :src="lightboxUrl" :style="zoomStyle" 
+                 @touchstart="handleTouchStartImg" 
+                 @touchmove="handleTouchMoveImg" 
+                 @touchend="handleTouchEndImg" draggable="false">
+            <button class="close-btn" @click="lightboxUrl = null">✕</button>
+        </div>
+
+        <nav class="bottom-nav">
+            <div v-for="tab in ['list','income','chart','wish','settings']" 
+                 :key="tab" class="nav-btn" :class="{active: activeTab===tab}" @click="activeTab=tab">
+                <i :class="getTabIcon(tab)"></i><div>{{ getTabName(tab) }}</div>
+            </div>
+        </nav>
+
+        <button v-if="isEditMode && (activeTab === 'list' || activeTab === 'income' || activeTab === 'wish')" 
+                class="fab-btn" :class="{'income-theme': activeTab === 'income'}" 
+                @click="activeTab === 'wish' ? openWishModal() : openAddModal()">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+
+        <transition name="fade"><div v-if="toastMsg" class="toast-overlay"><div class="toast-box">{{ toastMsg }}</div></div></transition>
+    </div>
+    <script src="script.js"></script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('PWA Service Worker 註冊成功'))
+        .catch(err => console.log('PWA 註冊失敗', err));
+    });
+  }
+</script>
+</body>
+</html>
