@@ -101,8 +101,9 @@
       position: relative; max-height: 160px; overflow: hidden;
       transition: max-height 0.5s ease;
       user-select: text;
+	  font-family: 'Consolas', 'Monaco', 'Courier New', 'JFOpenHuninn', monospace;
     }
-    .note-card.expanded .note-content { max-height: 2000px; }
+    .note-card.expanded .note-content { max-height: 5000px; }
     .note-content a { color: var(--accent-color); text-decoration: underline; }
 
     /* 漸層遮罩 */
@@ -141,12 +142,19 @@
     .copy-btn { background-color: var(--copy-color); }
     .delete-btn { background-color: var(--danger-color); }
 
-    .edit-textarea {
-      width: 100%; min-height: 120px; box-sizing: border-box;
-      border: 2px solid var(--accent-color); border-radius: 12px;
-      font-family: inherit; font-size: 15px; line-height: 1.7; padding: 10px;
-      outline: none;
-    }
+.edit-textarea {
+  width: 100%;
+  min-height: 200px; /* 稍微增加預設高度 */
+  box-sizing: border-box;
+  border: 2px solid var(--accent-color);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.7;
+  padding: 10px;
+  outline: none;
+  background: #fff; /* 確保背景不透明 */
+}
     
     #loader { text-align: center; padding: 20px; color: var(--accent-color); font-weight: bold; }
     .admin-only { display: none !important; }
@@ -233,11 +241,19 @@ async function fetchNotesFromServer() {
 }
 
 function processContent(text) {
-  const safeContent = escapeHtml(text);
+  // 1. 先處理 HTML 轉義，確保筆記內的 <script> 等不會被執行
+  let safeContent = escapeHtml(text);
+  
+  // 2. 處理 URL：將網址轉為可點擊連結
   const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-  let formatted = safeContent.replace(urlPattern, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
-  const tagPattern = /#([^\s#]+)/g;
-  return formatted.replace(tagPattern, (match, tagName) => `<span class="tag-link" data-tag="${tagName}">${match}</span>`);
+  safeContent = safeContent.replace(urlPattern, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
+  
+  // 3. 處理 #TAG：修正正則表達式，避免誤判代碼中的顏色值 (#ffffff)
+  // 規則：# 前面必須是空格或換行，或者是字串開頭
+  const tagPattern = /(^|\s)#([^\s#]+)/g;
+  return safeContent.replace(tagPattern, (match, space, tagName) => {
+    return `${space}<span class="tag-link" data-tag="${tagName}">#${tagName}</span>`;
+  });
 }
 
 function renderNotes() {
@@ -251,10 +267,15 @@ function renderNotes() {
     const card = document.createElement('div');
     card.className = 'note-card';
     card.dataset.id = note.id;
+    
     const contentHtml = processContent(note.content);
 
+    // 這裡我們多套一層 .note-inner 以便精確計算高度
     card.innerHTML = `
-      <div class="note-content">${contentHtml}<div class="content-overlay">...</div></div>
+      <div class="note-content">
+        <div class="note-inner">${contentHtml}</div>
+        <div class="content-overlay">...</div>
+      </div>
       <div class="note-meta">
         <span>${new Date(note.timestamp).toLocaleString()}</span>
         <div class="note-actions">
@@ -265,8 +286,10 @@ function renderNotes() {
       </div>`;
     
     notesContainer.appendChild(card);
-    const contentDiv = card.querySelector('.note-content');
-    if (contentDiv.scrollHeight <= 160) {
+    
+    // 關鍵修正：檢查 .note-inner 的實際物理高度
+    const inner = card.querySelector('.note-inner');
+    if (inner.scrollHeight <= 160) {
       card.querySelector('.content-overlay').style.display = 'none';
     }
   });
@@ -277,6 +300,11 @@ notesContainer.addEventListener('click', (e) => {
   const card = target.closest('.note-card');
   if (!card) return;
   const id = card.dataset.id;
+  // 1. 如果選取的目標是連結 <a>，則交由瀏覽器處理網址跳轉，不觸發展開
+  if (target.tagName === 'A') return;
+
+  // 2. 如果使用者正在滑鼠選取文字（例如準備複製代碼），則不觸發展開
+  if (window.getSelection().toString()) return;
 
   if (target.classList.contains('tag-link')) {
     const tagName = target.dataset.tag;
@@ -342,9 +370,9 @@ async function saveNote(id, card, button) {
 function copyNote(card, button) {
   const note = allNotes.find(n => n.id === card.dataset.id);
   
-  // 使用正則表達式移除所有 #TAG (包括後方的一個空白)
-  // 原理：找到 # 字開頭，直到空格或結尾的字串
-  const cleanContent = note.content.replace(/#[^\s#]+\s?/g, '').trim();
+  // 修正：只有在行首或空格後的 # 才被視為標籤並移除
+  // 這樣就不會誤刪代碼中的色碼 (如 #ffffff)
+  const cleanContent = note.content.replace(/(^|\s)#[^\s#]+\s?/g, '$1').trim();
   
   navigator.clipboard.writeText(cleanContent).then(() => {
     const oldHtml = button.innerHTML;
