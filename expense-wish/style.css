@@ -120,9 +120,27 @@ body { background: var(--bg); color: var(--text); margin: 0; overflow-x: hidden;
 .input-sub { flex: 1; min-width: 150px; padding: 8px; border-radius: 8px; border: 1px solid #eee; }
 .input-full { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #eee; }
 
-/* 付款方式單行排列 */
-.payment-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.input-payment { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #eee; }
+/* 付款方式單行排列 - 修正寬度溢出問題 */
+.payment-row { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    margin-bottom: 10px;
+    width: 100%; /* 確保橫列填滿容器 */
+}
+
+.input-payment { 
+    flex: 1; 
+    min-width: 0; /* 關鍵！強制 input 在寬度不足時縮小，不撐開外層 */
+    padding: 8px; 
+    border-radius: 8px; 
+    border: 1px solid #eee; 
+}
+
+/* 確保按鈕不會被壓縮成橢圓形 */
+.payment-row .icon-btn {
+    flex-shrink: 0; 
+}
 
 .action-btns { display: flex; gap: 5px; margin-left: auto; }
 .icon-btn { width: 30px; height: 30px; border: 1px solid #eee; background: white; border-radius: 6px; color: #888; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
