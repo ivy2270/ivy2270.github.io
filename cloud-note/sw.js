@@ -2,7 +2,8 @@ const CACHE_NAME = 'note-app-v10-key';
 const ASSETS = [
   'index.html',
   'manifest.json',
-  'https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf'
+  'https://font.emtech.cc/css/jfOpenHuninn',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
 ];
 
 // 安裝並快取資源
@@ -19,6 +20,7 @@ self.addEventListener('fetch', (e) => {
   );
 
 });
+
 
 
 
