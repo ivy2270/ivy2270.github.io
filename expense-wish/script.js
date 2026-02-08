@@ -1,11 +1,31 @@
 const { createApp } = Vue;
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbztlKj_qRV_hkjnFgJIIZBwvbKL2Xf_KfHlhdQKTdjmBHpquq2MDOcZQImx7xvKfYKE/exec';
-const USER_KEY = new URLSearchParams(window.location.search).get('key') || '';
+// 1. 取得網址上的 KEY
+const urlParams = new URLSearchParams(window.location.search);
+const keyFromUrl = urlParams.get('key');
+
+// 2. 判斷邏輯：
+// 如果網址有帶 key，不論內容為何都更新暫存並使用
+if (urlParams.has('key')) {
+    if (keyFromUrl) {
+        localStorage.setItem('user_access_key', keyFromUrl);
+    } else {
+        // 如果是 ?key= 這種空的，視為登出
+        localStorage.removeItem('user_access_key');
+    }
+} else {
+    // 網址完全沒帶 key 參數，視為登出，強制清空暫存
+    localStorage.removeItem('user_access_key');
+}
+
+// 最終使用的 KEY 來源（此時 localStorage 已根據上述邏輯同步）
+const FINAL_KEY = localStorage.getItem('user_access_key') || '';
 
 createApp({
     data() {
         return {
-            isEditMode: !!USER_KEY, // 有 KEY 就是編輯模式，沒有就是唯讀模式
+            isEditMode: !!FINAL_KEY, 
+            userKey: FINAL_KEY,
             activeTab: 'list',
             logs: [],
             wishes: [],
