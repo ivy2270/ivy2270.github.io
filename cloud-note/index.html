@@ -86,7 +86,7 @@
       box-sizing: border-box;
       transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       cursor: pointer; position: relative;
-      user-select: none;
+      user-select: auto;
     }
     @media (max-width: 900px) { .note-card { width: calc(50% - 10px); } }
     @media (max-width: 600px) { .note-card { width: 100%; } }
@@ -144,7 +144,7 @@
 }
 
     /* 功能按鈕統一化 */
-    .note-actions { display: flex; gap: 8px; }
+    .note-actions { display: flex; gap: 8px; user-select: none;}
     .note-actions button {
       width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
       font-size: 14px; border-radius: 10px;
