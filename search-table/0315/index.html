@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>拉丁之夜 - 賓客席次查詢</title>
+    <link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">	
+    <style>
+        /* 拉丁舞熱情風格配色 */
+        :root { 
+            --passion-red: #d32f2f;   /* 探戈紅 */
+            --midnight-black: #1a1212; /* 深邃黑 */
+            --vibrant-gold: #ffb300;  /* 華麗金 */
+            --pure-white: #ffffff;
+            --soft-gray: #f5f5f5;
+        }
+        
+        body { 
+            font-family: "Palatino", "Georgia", "微軟正黑體", serif; 
+            background-color: var(--midnight-black); 
+            /* 背景改為深色漸層，模擬舞池燈光感 */
+            background-image: /* 第一層：半透明漸層（模擬舞池上方打下來的燈光） */
+        linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)), 
+        /* 第二層：你下載的那張圖片 */
+        url('bg.png');
+            background-attachment: fixed;
+            color: var(--pure-white);
+            margin: 0; padding: 10px; 
+            display: flex; flex-direction: column; align-items: center; 
+            min-height: 100vh;
+        }
+
+        .container { width: 100%; max-width: 500px; }
+        
+        h1 { 
+            font-family: "Brush Script MT", "cursive", "微軟正黑體";
+            color: var(--vibrant-gold); 
+            text-align: center; 
+            font-size: 36px; 
+            margin: 30px 0 10px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--soft-gray);
+            font-size: 14px;
+            letter-spacing: 4px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            display: block;
+        }
+        
+        /* 搜尋區塊：高對比度、具現代感 */
+        .search-container { 
+            position: sticky; top: 0; 
+            display: flex; gap: 10px; 
+            background: rgba(26, 18, 18, 0.9); 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 15px 0; width: 100%; z-index: 100; 
+        }
+
+        .search-box { 
+            flex: 1; min-width: 0; padding: 14px 20px; font-size: 18px; 
+            border: 1px solid var(--vibrant-gold); border-radius: 4px; 
+            background: rgba(255,255,255,0.05); color: var(--pure-white);
+            outline: none; 
+            transition: all 0.3s;
+        }
+        
+        .search-box:focus { 
+            background: rgba(255,255,255,0.15);
+            box-shadow: 0 0 15px rgba(255, 179, 0, 0.3);
+        }
+
+        .clear-btn { 
+            padding: 0 20px; background: var(--passion-red); color: white; 
+            border: none; border-radius: 4px; 
+            font-weight: bold; white-space: nowrap; cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .clear-btn:hover { background: #b71c1c; }
+
+        /* 賓客卡片：戲劇化高對比 */
+        .guest-card { 
+            background: linear-gradient(145deg, #2a1f1f, #1e1616);
+            color: var(--pure-white);
+            border-radius: 2px; /* 俐落的方角更有力量感 */
+            padding: 20px; margin-bottom: 20px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border-bottom: 3px solid var(--passion-red);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .guest-name { font-size: 24px; font-weight: bold; margin-bottom: 4px; color: var(--vibrant-gold); }
+        .guest-org { font-size: 14px; color: #aaa; letter-spacing: 1px; }
+        
+        .guest-note { 
+            display: inline-block; margin-top: 12px; font-size: 12px; 
+            background: rgba(211, 47, 47, 0.2); padding: 4px 12px; 
+            border: 1px solid var(--passion-red); color: #ff8a80;
+            border-radius: 0px;
+        }
+
+        /* 桌次標章：如同舞池編號 */
+        .table-badge { 
+            border: 2px solid var(--vibrant-gold);
+            color: var(--vibrant-gold); 
+            padding: 10px; border-radius: 0; 
+            text-align: center; min-width: 60px;
+            background: transparent;
+        }
+        .table-num { font-size: 34px; font-weight: 800; display: block; line-height: 1; margin-top: 4px;}
+        
+        #status { text-align: center; color: var(--vibrant-gold); font-size: 15px; margin-top: 20px; font-style: italic; opacity: 0.8; }
+        #resultsList { width: 100%; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Latin Passion Night</h1>
+    <span class="subtitle">拉丁之夜 · 席次查詢</span>
+    
+    <div class="search-container">
+        <input type="text" id="searchInput" class="search-box" placeholder="輸入您的姓名..." autocomplete="off">
+        <button id="clearBtn" class="clear-btn">重設</button>
+    </div>
+    
+    <div id="status">準備進入舞池...</div>
+    <div id="resultsList"></div>
+</div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbzkMEwiE4tCOlHci3GZqiLFw5wQUVTI00p1SPpcjoLthCExOVB0tcL1uRsMbztrkiR8GA/exec';
+    let guestData = [];
+
+    (async function init() {
+        const status = document.getElementById('status');
+        try {
+            const res = await fetch(scriptURL, { method: 'GET', mode: 'cors' });
+            guestData = await res.json();
+            status.innerText = "名單已就緒，請輸入姓名查詢";
+        } catch (e) {
+            status.innerText = "連線失敗，請確認網路環境";
+        }
+    })();
+
+    const input = document.getElementById('searchInput');
+    const list = document.getElementById('resultsList');
+    const status = document.getElementById('status');
+
+    document.getElementById('clearBtn').onclick = () => {
+        input.value = '';
+        list.innerHTML = '';
+        status.style.display = 'block';
+        status.innerText = "名單已就緒，請輸入姓名查詢";
+        input.focus();
+    };
+
+    input.oninput = () => {
+        const key = input.value.trim().toLowerCase();
+        if (!key) { list.innerHTML = ''; status.style.display = 'block'; return; }
+        
+        const matched = guestData.filter(g => 
+            (g['姓名'] && String(g['姓名']).includes(key)) || 
+            (g['單位'] && String(g['單位']).includes(key)) ||
+            (g['單位簡稱'] && String(g['單位簡稱']).includes(key))
+        ).sort((a,b) => {
+            if (a['姓名'] === key) return -1;
+            return String(a['姓名']).startsWith(key) ? -1 : 1;
+        });
+
+        status.style.display = matched.length ? 'none' : 'block';
+        if (!matched.length) status.innerText = "抱歉，找不到您的入席資訊";
+
+        const frag = document.createDocumentFragment();
+        matched.slice(0, 10).forEach(g => {
+            const div = document.createElement('div');
+            div.className = 'guest-card';
+            const noteHtml = g['備註'] ? `<div class="guest-note">◆ ${g['備註']}</div>` : '';
+            div.innerHTML = `
+                <div>
+                    <div class="guest-name">${g['姓名']}</div>
+                    <div class="guest-org">${g['單位'] || ''}</div>
+                    ${noteHtml}
+                </div>
+                <div class="table-badge">
+                    <span style="font-size:10px; font-weight:bold;">TABLE</span>
+                    <span class="table-num">${g['桌次']}</span>
+                </div>`;
+            frag.appendChild(div);
+        });
+        list.innerHTML = '';
+        list.appendChild(frag);
+    };
+</script>
+</body>
+</html>
