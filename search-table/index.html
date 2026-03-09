@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>霍格華茲晚宴 - 桌次查詢</title>
+    <title> 2026  Welcome Party-桌次查詢</title>
 	<link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">	
+	<link href="https://font.emtech.cc/css/GenWanMinTW" rel="stylesheet" />
     <style>
         /* 魔法世界風格配色 */
         :root { 
@@ -15,10 +16,10 @@
         }
         
         body { 
-            font-family: "Times New Roman", "微軟正黑體", serif; 
+            font-family: "GenWanMinTW", "微軟正黑體", serif; 
             background-color: #1a1a1a; 
             /* 設定背景圖：疊加深色漸層確保文字可讀性 */
-            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('bg.png');
+            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('bg2.png');
             background-size: cover;
             background-position: center;
             background-attachment: fixed; /* 捲動時背景固定 */
@@ -110,18 +111,58 @@
         
         #status { text-align: center; color: var(--gold); font-size: 16px; margin-top: 15px; font-style: italic; text-shadow: 1px 1px 2px #000; }
         #resultsList { width: 100%; }
+		
+		/* 桌次圖樣式 */
+.table-map-container {
+    margin-top: 30px;
+    text-align: center;
+}
+.map-thumb {
+    width: 100%;
+    max-width: 300px; /* 平時顯示的大小 */
+    border: 3px solid var(--gold);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+.map-thumb:hover { transform: scale(1.02); }
+
+/* 放大後的遮罩層 */
+.map-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    cursor: zoom-out;
+}
+.map-overlay img {
+    max-width: 95%;
+    max-height: 95%;
+    border: 2px solid var(--gold);
+}
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Hogwarts Feast <br> <span style="font-size: 16px;">賓客入席查詢</span></h1>
+    <h1>2026 GTIDEC International   Welcome Party <br> <span style="font-size: 16px;">賓客入席查詢</span></h1>
     <div class="search-container">
         <input type="text" id="searchInput" class="search-box" placeholder="輸入您的姓名或單位..." autocomplete="off">
         <button id="clearBtn" class="clear-btn">清除</button>
     </div>
     <div id="status">正在翻閱預言家日報...</div>
     <div id="resultsList"></div>
+</div>
+<div class="table-map-container">
+        <p style="color: var(--gold); margin-bottom: 10px;">—— 活點地圖：桌次配置圖 ——</p>
+        <img src="table.jpg" alt="桌次圖" class="map-thumb" onclick="openMap()">
+    </div>
+</div> <div id="mapOverlay" class="map-overlay" onclick="closeMap()">
+    <img src="table.jpg" alt="桌次圖放大">
 </div>
 
 <script>
@@ -186,6 +227,14 @@
         list.innerHTML = '';
         list.appendChild(frag);
     };
+	
+	function openMap() {
+    document.getElementById('mapOverlay').style.display = 'flex';
+}
+
+function closeMap() {
+    document.getElementById('mapOverlay').style.display = 'none';
+}
 </script>
 </body>
 </html>
