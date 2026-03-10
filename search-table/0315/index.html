@@ -141,42 +141,6 @@
         }
         .map-thumb:hover { transform: scale(1.03); }
 
-/* 遮罩層：全螢幕黑底 */
-.overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; 
-    width: 100vw; height: 100vh;
-    background: rgba(0,0,0,0.95);
-    z-index: 1000;
-    overflow: auto; /* 關鍵：允許內部捲動 */
-    -webkit-overflow-scrolling: touch; /* 讓 iOS 滑動更順暢 */
-}
-
-/* 放大後的圖片 */
-.overlay img {
-    width: 100%; /* 初始寬度 */
-    height: auto;
-    display: block;
-    margin: auto;
-    transition: width 0.2s ease; /* 點擊縮放時的過場 */
-    touch-action: pinch-zoom; /* 關鍵：明確允許手勢縮放 */
-}
-
-/* 右上角關閉按鈕（因為圖片放大後可能點不到黑底） */
-.close-map-btn {
-    position: fixed;
-    top: 20px; right: 20px;
-    width: 40px; height: 40px;
-    background: var(--passion-red);
-    color: white;
-    border: 2px solid var(--vibrant-gold);
-    border-radius: 50%;
-    font-size: 24px;
-    z-index: 1001;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-}
     </style>
 </head>
 <body>
@@ -194,14 +158,13 @@
     <div id="resultsList"></div>
 </div>
 <div class="map-section">
-        <p style="color: var(--vibrant-gold); font-size: 14px; margin-bottom: 15px; letter-spacing: 2px;">— FLOOR PLAN 桌次配置圖 —</p>
-        <img src="table.jpg" alt="桌次圖" class="map-thumb" onclick="toggleMap(true)">
-    </div>
-</div> <div id="imageOverlay" class="overlay">
-    <button class="close-map-btn" onclick="toggleMap(false)">×</button>
-    <img id="fullImage" src="table.jpg" onclick="zoomImage(event)">
+    <p style="color: var(--vibrant-gold); font-size: 14px; margin-bottom: 15px; letter-spacing: 2px;">— FLOOR PLAN 桌次配置圖 —</p>
+    <a href="table.jpg" target="_blank">
+        <img src="table.jpg" alt="桌次圖" class="map-thumb">
+        <p style="color: var(--soft-gray); font-size: 12px; margin-top: 10px; opacity: 0.8;">(點擊開啟全圖，可自由縮放地圖)</p>
+    </a>
 </div>
-</div>
+
 
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbzkMEwiE4tCOlHci3GZqiLFw5wQUVTI00p1SPpcjoLthCExOVB0tcL1uRsMbztrkiR8GA/exec';
@@ -267,28 +230,6 @@
         list.appendChild(frag);
     };
 	
-function toggleMap(show) {
-    const overlay = document.getElementById('imageOverlay');
-    const img = document.getElementById('fullImage');
-    overlay.style.display = show ? 'block' : 'none';
-    
-    if (show) {
-        img.style.width = "100%"; // 重設大小
-        document.body.style.overflow = "hidden"; // 鎖定底層捲軸
-    } else {
-        document.body.style.overflow = "auto"; // 恢復底層捲軸
-    }
-}
-
-function zoomImage(event) {
-    const img = event.target;
-    // 簡單的點擊切換：在 100% 和 300% 之間切換
-    if (img.style.width === "100%" || img.style.width === "") {
-        img.style.width = "300%"; // 放大到 3 倍寬，讓細節絕對清晰
-    } else {
-        img.style.width = "100%";
-    }
-}
 </script>
 </body>
 </html>
