@@ -127,22 +127,42 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
 .map-thumb:hover { transform: scale(1.02); }
-
-/* 放大後的遮罩層 */
+/* 放大後的遮罩層：改為可捲動 */
 .map-overlay {
     display: none;
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.9);
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.95);
     z-index: 1000;
-    justify-content: center;
-    align-items: center;
-    cursor: zoom-out;
+    overflow: auto; /* 關鍵：允許內部捲動 */
+    -webkit-overflow-scrolling: touch; /* 讓 iOS 滑動更順暢 */
 }
+
 .map-overlay img {
-    max-width: 95%;
-    max-height: 95%;
+    /* 點開時自動放大到 200%，保證看得清楚，且能繼續雙指縮放 */
+    width: 200%; 
+    height: auto;
+    display: block;
+    margin: 0; /* 放大後靠左上開始捲動 */
     border: 2px solid var(--gold);
+    touch-action: pinch-zoom; /* 明確啟動雙指縮放手勢 */
+}
+
+/* 關閉按鈕：因為圖片變大後很難點到背景，需要一個固定按鈕 */
+.close-btn {
+    position: fixed;
+    top: 20px; right: 20px;
+    width: 45px; height: 45px;
+    background: var(--deep-red);
+    color: var(--gold);
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    font-size: 30px;
+    z-index: 1001;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
     </style>
 </head>
@@ -161,7 +181,8 @@
         <p style="color: var(--gold); margin-bottom: 10px;">—— 活點地圖：桌次配置圖 ——</p>
         <img src="table.jpg" alt="桌次圖" class="map-thumb" onclick="openMap()">
     </div>
-</div> <div id="mapOverlay" class="map-overlay" onclick="closeMap()">
+</div> <div id="mapOverlay" class="map-overlay">
+    <div class="close-btn" onclick="closeMap()">×</div>
     <img src="table.jpg" alt="桌次圖放大">
 </div>
 
@@ -228,12 +249,18 @@
         list.appendChild(frag);
     };
 	
-	function openMap() {
-    document.getElementById('mapOverlay').style.display = 'flex';
+function openMap() {
+    const overlay = document.getElementById('mapOverlay');
+    overlay.style.display = 'block'; // 改為 block 以配合 overflow: auto
+    document.body.style.overflow = 'hidden'; // 鎖定底層網頁，避免滑動圖片時底層也在動
+    
+    // 讓圖片開啟時自動滾動到中心（選配）
+    overlay.scrollLeft = overlay.scrollWidth / 4;
 }
 
 function closeMap() {
     document.getElementById('mapOverlay').style.display = 'none';
+    document.body.style.overflow = 'auto'; // 恢復網頁捲動
 }
 </script>
 </body>
