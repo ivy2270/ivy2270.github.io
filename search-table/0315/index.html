@@ -124,6 +124,39 @@
         
         #status { text-align: center; color: var(--vibrant-gold); font-size: 15px; margin-top: 20px; font-style: italic; opacity: 0.8; }
         #resultsList { width: 100%; }
+		
+		/* 桌次圖區塊樣式 */
+        .map-section {
+            margin-top: 40px;
+            text-align: center;
+            width: 100%;
+        }
+        .map-thumb {
+            width: 100%;
+            max-width: 320px;
+            border: 2px solid var(--vibrant-gold);
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .map-thumb:hover { transform: scale(1.03); }
+
+        /* 放大遮罩層 */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+        }
+        .overlay img {
+            max-width: 95%;
+            max-height: 90%;
+            border: 1px solid var(--vibrant-gold);
+        }
     </style>
 </head>
 <body>
@@ -139,6 +172,13 @@
     
     <div id="status">準備進入舞池...</div>
     <div id="resultsList"></div>
+</div>
+<div class="map-section">
+        <p style="color: var(--vibrant-gold); font-size: 14px; margin-bottom: 15px; letter-spacing: 2px;">— FLOOR PLAN 桌次配置圖 —</p>
+        <img src="table.jpg" alt="桌次圖" class="map-thumb" onclick="toggleMap(true)">
+    </div>
+</div> <div id="imageOverlay" class="overlay" onclick="toggleMap(false)">
+    <img src="table.jpg" alt="桌次圖放大">
 </div>
 
 <script>
@@ -204,6 +244,11 @@
         list.innerHTML = '';
         list.appendChild(frag);
     };
+	
+	function toggleMap(show) {
+        const overlay = document.getElementById('imageOverlay');
+        overlay.style.display = show ? 'flex' : 'none';
+    }
 </script>
 </body>
 </html>
