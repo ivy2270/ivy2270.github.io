@@ -141,41 +141,41 @@
         }
         .map-thumb:hover { transform: scale(1.03); }
 
-       /* 遮罩層：改為可捲動 */
+/* 遮罩層：全螢幕黑底 */
 .overlay {
     display: none;
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: 0; left: 0; 
+    width: 100vw; height: 100vh;
     background: rgba(0,0,0,0.95);
     z-index: 1000;
-    overflow: auto; /* 允許捲動 */
-    cursor: pointer;
-    padding: 20px;
-    box-sizing: border-box;
+    overflow: auto; /* 關鍵：允許內部捲動 */
+    -webkit-overflow-scrolling: touch; /* 讓 iOS 滑動更順暢 */
 }
 
-/* 放大後的圖片：預設寬度 100%，點擊後可切換超大尺寸 */
+/* 放大後的圖片 */
 .overlay img {
-    width: 100%; 
+    width: 100%; /* 初始寬度 */
     height: auto;
-    transition: width 0.3s ease; /* 縮放動畫 */
-    border: 1px solid var(--vibrant-gold);
     display: block;
     margin: auto;
+    transition: width 0.2s ease; /* 點擊縮放時的過場 */
+    touch-action: pinch-zoom; /* 關鍵：明確允許手勢縮放 */
 }
 
-/* 提示文字 */
-.zoom-tip {
+/* 右上角關閉按鈕（因為圖片放大後可能點不到黑底） */
+.close-map-btn {
     position: fixed;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 20px; right: 20px;
+    width: 40px; height: 40px;
+    background: var(--passion-red);
     color: white;
-    background: rgba(211, 47, 47, 0.8);
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-size: 12px;
-    pointer-events: none;
+    border: 2px solid var(--vibrant-gold);
+    border-radius: 50%;
+    font-size: 24px;
+    z-index: 1001;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
 }
     </style>
 </head>
@@ -197,9 +197,9 @@
         <p style="color: var(--vibrant-gold); font-size: 14px; margin-bottom: 15px; letter-spacing: 2px;">— FLOOR PLAN 桌次配置圖 —</p>
         <img src="table.jpg" alt="桌次圖" class="map-thumb" onclick="toggleMap(true)">
     </div>
-</div> <div id="imageOverlay" class="overlay" onclick="handleOverlayClick(event)">
-    <div class="zoom-tip">點擊圖片放大/縮小，點擊黑底處關閉</div>
-    <img id="fullImage" src="table.jpg" alt="桌次圖放大">
+</div> <div id="imageOverlay" class="overlay">
+    <button class="close-map-btn" onclick="toggleMap(false)">×</button>
+    <img id="fullImage" src="table.jpg" onclick="zoomImage(event)">
 </div>
 </div>
 
@@ -267,33 +267,26 @@
         list.appendChild(frag);
     };
 	
-	function toggleMap(show) {
+function toggleMap(show) {
     const overlay = document.getElementById('imageOverlay');
     const img = document.getElementById('fullImage');
     overlay.style.display = show ? 'block' : 'none';
-    if(show) {
-        img.style.width = "100%"; // 每次開啟先重設為螢幕寬度
-        document.body.style.overflow = "hidden"; // 禁止底層網頁捲動
+    
+    if (show) {
+        img.style.width = "100%"; // 重設大小
+        document.body.style.overflow = "hidden"; // 鎖定底層捲軸
     } else {
-        document.body.style.overflow = "auto";
+        document.body.style.overflow = "auto"; // 恢復底層捲軸
     }
 }
 
-function handleOverlayClick(event) {
-    const img = document.getElementById('fullImage');
-    // 如果點擊的是圖片本身
-    if (event.target === img) {
-        // 切換寬度：如果原本是 100%，就放大到 250% (可根據桌數調整)
-        if (img.style.width === "100%") {
-            img.style.width = "250%"; 
-            img.style.cursor = "zoom-out";
-        } else {
-            img.style.width = "100%";
-            img.style.cursor = "zoom-in";
-        }
+function zoomImage(event) {
+    const img = event.target;
+    // 簡單的點擊切換：在 100% 和 300% 之間切換
+    if (img.style.width === "100%" || img.style.width === "") {
+        img.style.width = "300%"; // 放大到 3 倍寬，讓細節絕對清晰
     } else {
-        // 如果點擊的是黑底區域，則關閉
-        toggleMap(false);
+        img.style.width = "100%";
     }
 }
 </script>
