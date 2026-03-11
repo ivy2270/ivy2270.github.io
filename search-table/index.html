@@ -178,17 +178,26 @@
         input.focus();
     };
 
-    input.oninput = () => {
-        const key = input.value.trim().toLowerCase();
+input.oninput = () => {
+        // 將使用者輸入的關鍵字：轉小寫、去除所有空格與特殊符號
+        const rawKey = input.value.trim();
+        const key = rawKey.toLowerCase().replace(/[\s,.-]/g, ''); 
+        
         if (!key) { list.innerHTML = ''; status.style.display = 'block'; return; }
         
-        const matched = guestData.filter(g => 
-            (g['姓名'] && String(g['姓名']).includes(key)) || 
-            (g['單位'] && String(g['單位']).includes(key)) ||
-            (g['單位簡稱'] && String(g['單位簡稱']).includes(key))
-        ).sort((a,b) => {
-            if (a['姓名'] === key) return -1;
-            return String(a['姓名']).startsWith(key) ? -1 : 1;
+        const matched = guestData.filter(g => {
+            // 處理原始資料：轉字串、轉小寫、去除空格與符號
+            const cleanName = String(g['姓名'] || '').toLowerCase().replace(/[\s,.-]/g, '');
+            const cleanOrg = String(g['單位'] || '').toLowerCase().replace(/[\s,.-]/g, '');
+            const cleanShort = String(g['單位簡稱'] || '').toLowerCase().replace(/[\s,.-]/g, '');
+            
+            return cleanName.includes(key) || cleanOrg.includes(key) || cleanShort.includes(key);
+        }).sort((a, b) => {
+            const nameA = String(a['姓名'] || '').toLowerCase();
+            // 如果完全一樣（不計空格符號），排在最前面
+            const cleanA = nameA.replace(/[\s,.-]/g, '');
+            if (cleanA === key) return -1;
+            return nameA.startsWith(rawKey.toLowerCase()) ? -1 : 1;
         });
 
         status.style.display = matched.length ? 'none' : 'block';
