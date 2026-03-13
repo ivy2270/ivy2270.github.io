@@ -168,7 +168,14 @@
 
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwOCB4MoLUuM6VaQyLqyBgeChWgSw-EDEfUk4cMYipFwdq7wuKzR_v3wyspY7ygav7zeQ/exec";
-    const key = new URLSearchParams(window.location.search).get('key') || "";
+    let key = new URLSearchParams(window.location.search).get('key');
+    if (key) {
+        localStorage.setItem('pwa_admin_key', key); // 網址有 key 就存起來
+    } else {
+        key = localStorage.getItem('pwa_admin_key') || ""; // 網址沒 key 就從記憶體抓
+    }
+    // ----------------------------------
+
     let orders = [], todos = [];
 
     function showPage(id) {
