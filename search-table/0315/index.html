@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>2026大台北國際牙展暨學術年會晚宴 - 賓客席次查詢</title>
-    <link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">	
+    <link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">    
     <style>
         /* 拉丁舞熱情風格配色 */
         :root { 
@@ -18,12 +18,9 @@
         body { 
             font-family: "Palatino", "Georgia", "微軟正黑體", serif; 
             background-color: var(--midnight-black); 
-            /* 背景改為深色漸層，模擬舞池燈光感 */
-            background-image: /* 第一層：半透明漸層（模擬舞池上方打下來的燈光） */
-        linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)), 
-        /* 第二層：你下載的那張圖片 */
-        url('bg.png');
+            background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)), url('bg.png');
             background-attachment: fixed;
+            background-size: cover;
             color: var(--pure-white);
             margin: 0; padding: 10px; 
             display: flex; flex-direction: column; align-items: center; 
@@ -52,7 +49,6 @@
             display: block;
         }
         
-        /* 搜尋區塊：高對比度、具現代感 */
         .search-container { 
             position: sticky; top: 0; 
             display: flex; gap: 10px; 
@@ -66,8 +62,7 @@
             flex: 1; min-width: 0; padding: 14px 20px; font-size: 18px; 
             border: 1px solid var(--vibrant-gold); border-radius: 4px; 
             background: rgba(255,255,255,0.05); color: var(--pure-white);
-            outline: none; 
-            transition: all 0.3s;
+            outline: none; transition: all 0.3s;
         }
         
         .search-box:focus { 
@@ -79,17 +74,14 @@
             padding: 0 20px; background: var(--passion-red); color: white; 
             border: none; border-radius: 4px; 
             font-weight: bold; white-space: nowrap; cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px;
         }
         .clear-btn:hover { background: #b71c1c; }
 
-        /* 賓客卡片：戲劇化高對比 */
         .guest-card { 
             background: linear-gradient(145deg, #2a1f1f, #1e1616);
             color: var(--pure-white);
-            border-radius: 2px; /* 俐落的方角更有力量感 */
+            border-radius: 2px;
             padding: 20px; margin-bottom: 20px; 
             display: flex; justify-content: space-between; align-items: center; 
             border-bottom: 3px solid var(--passion-red);
@@ -109,38 +101,26 @@
             display: inline-block; margin-top: 12px; font-size: 12px; 
             background: rgba(211, 47, 47, 0.2); padding: 4px 12px; 
             border: 1px solid var(--passion-red); color: #ff8a80;
-            border-radius: 0px;
         }
 
-        /* 桌次標章：如同舞池編號 */
         .table-badge { 
             border: 2px solid var(--vibrant-gold);
             color: var(--vibrant-gold); 
-            padding: 10px; border-radius: 0; 
-            text-align: center; min-width: 60px;
-            background: transparent;
+            padding: 10px; text-align: center; min-width: 60px;
         }
         .table-num { font-size: 34px; font-weight: 800; display: block; line-height: 1; margin-top: 4px;}
         
         #status { text-align: center; color: var(--vibrant-gold); font-size: 15px; margin-top: 20px; font-style: italic; opacity: 0.8; }
         #resultsList { width: 100%; }
-		
-		/* 桌次圖區塊樣式 */
-        .map-section {
-            margin-top: 40px;
-            text-align: center;
-            width: 100%;
-        }
+        
+        .map-section { margin-top: 40px; text-align: center; width: 100%; }
         .map-thumb {
-            width: 100%;
-            max-width: 320px;
+            width: 100%; max-width: 320px;
             border: 2px solid var(--vibrant-gold);
-            cursor: pointer;
-            transition: 0.3s;
+            cursor: pointer; transition: 0.3s;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         .map-thumb:hover { transform: scale(1.03); }
-
     </style>
 </head>
 <body>
@@ -157,22 +137,25 @@
     <div id="status">準備進入舞池...</div>
     <div id="resultsList"></div>
 
-<div class="map-section">
-    <p style="color: var(--vibrant-gold); font-size: 14px; margin-bottom: 15px; letter-spacing: 2px;">— FLOOR PLAN 桌次配置圖 —</p>
-    <a href="table.jpg" target="_blank">
-        <img src="table.jpg" alt="桌次圖" class="map-thumb">
-        <p style="color: var(--soft-gray); font-size: 12px; margin-top: 10px; opacity: 0.8;">(點擊開啟全圖，可自由縮放地圖)</p>
-    </a>
+    <div class="map-section">
+        <p style="color: var(--vibrant-gold); font-size: 14px; margin-bottom: 15px; letter-spacing: 2px;">— FLOOR PLAN 桌次配置圖 —</p>
+        <a href="table.jpg" target="_blank">
+            <img src="table.jpg" alt="桌次圖" class="map-thumb">
+            <p style="color: var(--soft-gray); font-size: 12px; margin-top: 10px; opacity: 0.8;">(點擊開啟全圖，可自由縮放地圖)</p>
+        </a>
+    </div>
 </div>
-	</div>
-
 
 <script>
     const scriptURL = 'https://script.google.com/macros/s/AKfycbzkMEwiE4tCOlHci3GZqiLFw5wQUVTI00p1SPpcjoLthCExOVB0tcL1uRsMbztrkiR8GA/exec';
     let guestData = [];
 
+    const input = document.getElementById('searchInput');
+    const list = document.getElementById('resultsList');
+    const status = document.getElementById('status');
+
+    // 1. 初始化資料載入
     (async function init() {
-        const status = document.getElementById('status');
         try {
             const res = await fetch(scriptURL, { method: 'GET', mode: 'cors' });
             guestData = await res.json();
@@ -182,10 +165,7 @@
         }
     })();
 
-    const input = document.getElementById('searchInput');
-    const list = document.getElementById('resultsList');
-    const status = document.getElementById('status');
-
+    // 2. 重設按鈕
     document.getElementById('clearBtn').onclick = () => {
         input.value = '';
         list.innerHTML = '';
@@ -194,216 +174,45 @@
         input.focus();
     };
 
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title> 2026  Welcome Party-桌次查詢</title>
-	<link rel="icon" type="image/svg+xml" href="wine-glass-svgrepo-com.svg">	
-	<link href="https://font.emtech.cc/css/GenWanMinTW" rel="stylesheet" />
-    <style>
-        /* 魔法世界風格配色 */
-        :root { 
-            --gold: #d4af37; 
-            --deep-red: #740001; 
-            --parchment: #f4ede0; 
-            --dark-text: #2c1e16;
-        }
-        
-        body { 
-            font-family: "GenWanMinTW", "微軟正黑體", serif; 
-            background-color: #1a1a1a; 
-            /* 設定背景圖：疊加深色漸層確保文字可讀性 */
-            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('bg2.png');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed; /* 捲動時背景固定 */
-            background-repeat: no-repeat;
-            color: var(--parchment);
-            margin: 0; padding: 10px; 
-            display: flex; flex-direction: column; align-items: center; 
-            min-height: 100vh;
-        }
-
-        .container { width: 100%; max-width: 500px; }
-        
-        h1 { 
-            font-variant: small-caps;
-            color: var(--gold); 
-            text-align: center; 
-            font-size: 26px; 
-            margin: 20px 0;
-            text-shadow: 2px 2px 8px #000; /* 加強陰影讓文字脫離背景 */
-            letter-spacing: 2px;
-        }
-        
-        /* 搜尋區塊：加入半透明毛玻璃效果 */
-        .search-container { 
-            position: sticky; top: 0; 
-            display: flex; gap: 8px; 
-            background: rgba(26,26,26,0.85); 
-            backdrop-filter: blur(5px); /* 現代瀏覽器的毛玻璃效果 */
-            -webkit-backdrop-filter: blur(5px);
-            padding: 15px 0; width: 100%; z-index: 100; 
-        }
-
-        .search-box { 
-            flex: 1; min-width: 0; padding: 14px; font-size: 18px; 
-            border: 2px solid var(--gold); border-radius: 5px; 
-            background: var(--parchment); color: var(--dark-text);
-            outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .clear-btn { 
-            padding: 0 15px; background: var(--deep-red); color: var(--gold); 
-            border: 1px solid var(--gold); border-radius: 5px; 
-            font-weight: bold; white-space: nowrap; cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .clear-btn:active { transform: scale(0.95); }
-
-        /* 賓客卡片：羊皮紙風格 */
-        .guest-card { 
-            background: var(--parchment); 
-            background-image: url('https://www.transparenttextures.com/patterns/old-map.png');
-            color: var(--dark-text);
-            border-radius: 5px; padding: 18px; margin-bottom: 15px; 
-            display: flex; justify-content: space-between; align-items: center; 
-            border: 1px solid #d4c4a8;
-            box-shadow: 8px 8px 20px rgba(0,0,0,0.6);
-            position: relative;
-            overflow: hidden;
-            animation: fadeIn 0.4s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* 卡片側邊裝飾線 */
-        .guest-card::before {
-            content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--deep-red);
-        }
-
-        .guest-name { font-size: 24px; font-weight: bold; margin-bottom: 4px; color: var(--deep-red); }
-        .guest-org { font-size: 15px; color: #5a4a3a; font-style: italic; }
-        
-        .guest-note { 
-            display: inline-block; margin-top: 8px; font-size: 13px; 
-            background: #e6dcc5; padding: 2px 8px; border-radius: 3px;
-            border-bottom: 1px solid var(--gold); color: #8a0000; font-weight: bold;
-        }
-
-        /* 桌次標章 */
-        .table-badge { 
-            background: var(--deep-red); color: var(--gold); 
-            padding: 10px; border-radius: 50% 50% 5px 5px; 
-            text-align: center; min-width: 65px; border: 2px solid var(--gold);
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-        }
-        .table-num { font-size: 28px; font-weight: bold; display: block; }
-        
-        #status { text-align: center; color: var(--gold); font-size: 16px; margin-top: 15px; font-style: italic; text-shadow: 1px 1px 2px #000; }
-        #resultsList { width: 100%; }
-		
-		/* 桌次圖樣式 */
-.table-map-container {
-    margin-top: 30px;
-    text-align: center;
-}
-.map-thumb {
-    width: 100%;
-    max-width: 300px; /* 平時顯示的大小 */
-    border: 3px solid var(--gold);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: transform 0.3s;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-}
-.map-thumb:hover { transform: scale(1.02); }
-
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <h1>2026 GTIDEC International   Welcome Party <br> <span style="font-size: 16px;">賓客入席查詢</span></h1>
-    <div class="search-container">
-        <input type="text" id="searchInput" class="search-box" placeholder="輸入您的姓名或單位..." autocomplete="off">
-        <button id="clearBtn" class="clear-btn">清除</button>
-    </div>
-    <div id="status">正在翻閱預言家日報...</div>
-    <div id="resultsList"></div>
-
-<div class="table-map-container">
-    <p style="color: var(--gold); margin-bottom: 10px;">—— 活點地圖：桌次配置圖 ——</p>
-    <a href="table.jpg" target="_blank" style="text-decoration: none;">
-        <img src="table.jpg" alt="桌次圖" class="map-thumb">
-        <p style="color: var(--gold); font-size: 13px; margin-top: 10px; opacity: 0.8; font-style: italic;">
-            (點擊開啟全圖，可自由雙指縮放地圖)
-        </p>
-    </a>
-</div>
-	</div>
-
-<script>
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbxmcFoTi_durh7ZGKyQ7d7wmuHPyth47MB0oypGxfBcGF_WIEZ9qhqVj-bscudAl_M/exec';
-    let guestData = [];
-
-    (async function init() {
-        const status = document.getElementById('status');
-        try {
-            const res = await fetch(scriptURL, { method: 'GET', mode: 'cors' });
-            guestData = await res.json();
-            status.innerText = "魔法契約已載入，請輸入姓名";
-        } catch (e) {
-            status.innerText = "呼神護衛！連線失敗，請重掃";
-        }
-    })();
-
-    const input = document.getElementById('searchInput');
-    const list = document.getElementById('resultsList');
-    const status = document.getElementById('status');
-
-    document.getElementById('clearBtn').onclick = () => {
-        input.value = '';
-        list.innerHTML = '';
-        status.style.display = 'block';
-        input.focus();
-    };
-
-input.oninput = () => {
-        // 將使用者輸入的關鍵字：轉小寫、去除所有空格與特殊符號
+    // 3. 搜尋邏輯
+    input.oninput = () => {
         const rawKey = input.value.trim();
-        const key = rawKey.toLowerCase().replace(/[\s,.-]/g, ''); 
+        // 將輸入關鍵字去空格、去符號、轉小寫
+        const searchKey = rawKey.toLowerCase().replace(/[\s,.-]/g, ''); 
         
-        if (!key) { list.innerHTML = ''; status.style.display = 'block'; return; }
+        if (!searchKey) { 
+            list.innerHTML = ''; 
+            status.style.display = 'block'; 
+            status.innerText = "名單已就緒，請輸入姓名查詢"; 
+            return; 
+        }
         
+        // 過濾資料：只比對「姓名」、「單位」、「單位簡稱」
         const matched = guestData.filter(g => {
-            // 處理原始資料：轉字串、轉小寫、去除空格與符號
-            const cleanName = String(g['姓名'] || '').toLowerCase().replace(/[\s,.-]/g, '');
-            const cleanOrg = String(g['單位'] || '').toLowerCase().replace(/[\s,.-]/g, '');
-            const cleanShort = String(g['單位簡稱'] || '').toLowerCase().replace(/[\s,.-]/g, '');
+            const name = String(g['姓名'] || '').toLowerCase().replace(/[\s,.-]/g, '');
+            const org = String(g['單位'] || '').toLowerCase().replace(/[\s,.-]/g, '');
+            const shortOrg = String(g['單位簡稱'] || '').toLowerCase().replace(/[\s,.-]/g, '');
             
-            return cleanName.includes(key) || cleanOrg.includes(key) || cleanShort.includes(key);
-        }).sort((a, b) => {
-            const nameA = String(a['姓名'] || '').toLowerCase();
-            // 如果完全一樣（不計空格符號），排在最前面
-            const cleanA = nameA.replace(/[\s,.-]/g, '');
-            if (cleanA === key) return -1;
-            return nameA.startsWith(rawKey.toLowerCase()) ? -1 : 1;
+            return name.includes(searchKey) || org.includes(searchKey) || shortOrg.includes(searchKey);
         });
 
+        // 顯示結果
         status.style.display = matched.length ? 'none' : 'block';
-        if (!matched.length) status.innerText = "地圖上找不到這位巫師";
+        
+        if (matched.length === 0) {
+            status.innerText = "找不到相關席次資訊";
+            list.innerHTML = '';
+            return;
+        }
 
         const frag = document.createDocumentFragment();
-        matched.slice(0, 10).forEach(g => {
+        matched.slice(0, 15).forEach(g => {
             const div = document.createElement('div');
             div.className = 'guest-card';
+            
+            // 這裡不做任何判斷，直接把 GAS 傳來的原始內容塞進去
             const noteHtml = g['備註'] ? `<div class="guest-note">✨ ${g['備註']}</div>` : '';
+            
             div.innerHTML = `
                 <div>
                     <div class="guest-name">${g['姓名']}</div>
@@ -416,14 +225,10 @@ input.oninput = () => {
                 </div>`;
             frag.appendChild(div);
         });
+        
         list.innerHTML = '';
         list.appendChild(frag);
     };
-	
-</script>
-</body>
-</html>
-	
 </script>
 </body>
 </html>
