@@ -316,6 +316,14 @@
     };
 
     init();
+    // 註冊 Service Worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('PWA Ready!', reg.scope))
+            .catch(err => console.log('PWA Failed', err));
+    });
+}
 </script>
 </body>
 </html>
