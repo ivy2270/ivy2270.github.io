@@ -12,8 +12,28 @@
     <meta name="theme-color" content="#ffdae0">
     <style>
         :root { --pink: #ffdae0; --deep-pink: #ff85a2; --green: #e2f0d9; --dark-green: #6a994e; --text: #5a5a5a; }
-        body { font-family: 'jf-openhuninn', sans-serif; background: #fffafb; color: var(--text); margin: 0; padding: 10px; -webkit-tap-highlight-color: transparent; }
-        .container { max-width: 600px; margin: 0 auto; padding-bottom: 90px; }
+    
+    /* 這裡把字體套用到所有元素 */
+    * { font-family: 'JFOpenHuninn', sans-serif; }
+    
+    body { background: #fffafb; color: var(--text); margin: 0; padding: 10px; -webkit-tap-highlight-color: transparent; }
+    
+    .container { max-width: 600px; margin: 0 auto; padding-bottom: 90px; }
+    h1 { text-align: center; color: var(--deep-pink); font-size: 1.6rem; margin: 15px 0; }
+    
+    /* 表單元件強制字體 */
+    input, select, button { 
+        font-family: 'JFOpenHuninn', sans-serif !important; 
+        padding: 12px; 
+        border-radius: 15px; 
+        border: 2px solid var(--pink); 
+        font-size: 1rem; 
+        width: 100%; 
+        box-sizing: border-box; 
+        transition: 0.2s; 
+    }
+    
+    input::placeholder { font-family: 'JFOpenHuninn', sans-serif; }
         h1 { text-align: center; color: var(--deep-pink); font-size: 1.6rem; margin: 15px 0; }
         .page { display: none; animation: slideUp 0.3s ease-out; }
         .page.active { display: block; }
@@ -316,7 +336,7 @@
     };
 
     init();
-    // 註冊 Service Worker
+	// 註冊 Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
