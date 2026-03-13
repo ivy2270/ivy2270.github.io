@@ -2,7 +2,7 @@
   "name": "2026大台北牙展團購",
   "short_name": "牙展團購",
   "description": "2026大台北牙展內部團購系統",
-  "start_url": "./",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#fffafb",
   "theme_color": "#ffdae0",
