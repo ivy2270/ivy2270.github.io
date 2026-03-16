@@ -204,13 +204,18 @@
             document.getElementById('searchVendor').innerHTML = '<option value="">所有廠商</option>' + data.vendors.map(v => `<option value="${v}">${v}</option>`).join('');
             document.getElementById('dmList').innerHTML = data.files.map(f => `<a href="${f[2]}" target="_blank" class="dm-badge"><i class="fa-solid fa-image"></i> ${f[0]}</a>`).join('');
 
-            if (data.isAdmin) {
-                document.getElementById('adminNav').style.display = 'block';
-                document.getElementById('editVendors').value = data.vendors.join(',');
-                todos = data.todos.map(t => ({ text: t[0], status: t[1] }));
-                localStorage.setItem('todo_cache', JSON.stringify(todos));
-                renderTodos();
-            }
+            // 在 init() 函式內的 if (data.isAdmin) 區塊：
+if (data.isAdmin) {
+    document.getElementById('adminNav').style.display = 'block';
+    document.getElementById('editVendors').value = data.vendors.join(',');
+    
+    // 修正：如果伺服器回傳的是空的或錯誤的，不要立刻清空本地 todos
+    if (data.todos && data.todos.length > 0) {
+        todos = data.todos.map(t => ({ text: t[0], status: t[1] }));
+        localStorage.setItem('todo_cache', JSON.stringify(todos));
+        renderTodos();
+    }
+}
             orders = data.orders.slice(1);
             filterOrders();
         } catch (err) {
