@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>陽明牙醫系校友大會報到系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+            touch-action: manipulation;
+        }
+
+        .main-card {
+            background: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .bg-dental { background-color: #3a8c8c; }
+        .text-dental { color: #3a8c8c; }
+        .border-dental { border-color: #3a8c8c; }
+
+        .field-readonly {
+            background-color: #f9fafb;
+            color: #6b7280;
+            border-bottom: 2px dashed #d1d5db;
+        }
+
+        .field-editable {
+            background-color: #ffffff;
+            color: #111827;
+            border-bottom: 2px solid #3a8c8c;
+        }
+
+        .loading-spinner { 
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #3a8c8c; 
+            border-radius: 50%; 
+            width: 40px; height: 40px; 
+            animation: spin 1s linear infinite; 
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start pt-6 pb-10 px-4">
+
+    <div class="mb-6 text-center w-full max-w-md">
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center justify-center gap-2">
+            <span class="text-dental">🦷</span> 陽明牙醫系校友大會報到
+        </h1>
+        <p class="text-gray-500 mt-2 font-medium text-lg">歡迎各位校友回娘家</p>
+    </div>
+
+    <div class="w-full max-w-md main-card rounded-2xl p-6">
+        
+        <div id="step1">
+            <div class="mb-6">
+                <label class="block text-lg font-bold text-gray-700 mb-2">請輸入您的姓名</label>
+                <input id="nameInput" type="text" placeholder="例如：王小明" 
+                       class="w-full border-2 border-gray-200 p-4 rounded-xl outline-none focus:border-dental text-xl">
+            </div>
+            <button onclick="searchName()" class="w-full bg-dental text-white font-bold py-4 rounded-xl text-xl shadow-md active:bg-teal-900 transition-colors">
+                開始搜尋
+            </button>
+            <div id="searchList" class="mt-8 space-y-4"></div>
+        </div>
+
+        <div id="step2" class="hidden">
+            <button onclick="goBack(1)" class="text-dental font-bold text-lg mb-6 flex items-center">
+                ⬅ 重新搜尋
+            </button>
+            
+            <div id="targetUser" class="bg-blue-50 p-5 rounded-xl mb-6 text-gray-800 border-l-8 border-dental shadow-sm leading-relaxed">
+                </div>
+
+            <div class="mb-6">
+                <label class="block text-lg font-bold text-gray-700 mb-2">請輸入手機號碼進行驗證</label>
+                <input id="phoneInput" type="tel" placeholder="請輸入 10 位數完整手機" 
+                       class="w-full border-2 border-gray-200 p-4 rounded-xl outline-none focus:border-dental text-xl tracking-widest">
+            </div>
+            <button onclick="verifyPhone(false)" class="w-full bg-dental text-white font-bold py-4 rounded-xl text-xl shadow-md">
+                驗證並進入修改
+            </button>
+        </div>
+
+        <div id="step3" class="hidden">
+            <div class="mb-6 border-b-2 border-orange-100 pb-2 text-center">
+                <p class="text-lg font-bold text-orange-600">確認聯絡資訊</p>
+                <p class="text-sm text-gray-500 font-medium">欄位名稱後方有 * 為必填</p>
+            </div>
+            <div id="dynamicForm" class="space-y-6 max-h-[60vh] overflow-y-auto px-1"></div>
+            <button onclick="updateData()" class="w-full mt-8 bg-orange-500 text-white font-bold py-5 rounded-xl text-xl shadow-lg active:scale-95 transition-all">
+                確認無誤，領取紀念品
+            </button>
+        </div>
+
+        <div id="stepSuccess" class="hidden text-center py-8">
+            <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span class="text-5xl text-green-600">✔</span>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">報到完成！</h2>
+            <p class="text-xl text-gray-600 leading-relaxed font-medium">請向工作人員出示此畫面<br>領取您的紀念品</p>
+            <button onclick="location.reload()" class="mt-12 text-gray-400 font-bold text-lg underline">返回首頁</button>
+        </div>
+    </div>
+
+    <div id="loader" class="hidden fixed inset-0 bg-white/90 flex items-center justify-center z-50">
+        <div class="flex flex-col items-center">
+            <div class="loading-spinner mb-4"></div>
+            <p class="text-xl font-bold text-dental">處理中，請稍候...</p>
+        </div>
+    </div>
+
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyd635FL_5zk5dTdoXcq3H5rA8ts8W19vK4_YMBcl7UwpiJ-TNcda4ONt4-mg0UWQJo/exec'; 
+        let currentId = null;
+        let rawFullData = {};
+        const excludeFields = ['ID', '報到', '最後更新時間']; 
+        const readonlyFields = ['姓名', '屆次', 'DD'];
+        const requiredFields = ['手機', '執業地點'];
+
+        function toggleLoader(show) { document.getElementById('loader').classList.toggle('hidden', !show); }
+
+        async function api(data) {
+            toggleLoader(true);
+            try {
+                const resp = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(data) });
+                const json = await resp.json();
+                toggleLoader(false);
+                return json;
+            } catch (e) {
+                toggleLoader(false);
+                alert("系統繁忙，請檢查網路後再試一次");
+            }
+        }
+
+        async function searchName() {
+            const name = document.getElementById('nameInput').value.trim();
+            if(!name) return;
+            const res = await api({ action: 'search', name: name });
+            const list = document.getElementById('searchList');
+            list.innerHTML = '';
+            if(res.data.length === 0) {
+                list.innerHTML = '<div class="p-6 bg-red-100 text-red-700 text-lg text-center rounded-xl font-bold border-2 border-red-200">查無資料，請洽櫃台志工幫忙</div>';
+                return;
+            }
+            res.data.forEach(item => {
+                const isDone = item.status === "已領取";
+                const div = document.createElement('div');
+                
+                if(isDone) {
+                    div.className = "p-5 rounded-2xl border-2 border-gray-300 bg-gray-200 cursor-default";
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-xl text-gray-600">${item.name}</div>
+                                <div class="text-sm font-bold text-gray-500">${item.year} | ${item.dd_year}</div>
+                            </div>
+                            <span class="bg-gray-500 text-white text-sm font-bold px-4 py-2 rounded-full">已領取完成</span>
+                        </div>
+                    `;
+                } else {
+                    div.className = "p-5 rounded-2xl border-2 border-dental bg-white shadow-sm cursor-pointer active:bg-teal-50";
+                    div.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-bold text-2xl text-gray-800">${item.name}</div>
+                                <div class="text-md font-bold text-dental">${item.year} | ${item.dd_year}</div>
+                            </div>
+                            <span class="bg-dental text-white text-sm font-bold px-4 py-2 rounded-full shadow-sm">點擊報到 ➡</span>
+                        </div>
+                    `;
+                    div.onclick = () => {
+                        currentId = item.id;
+                        // 檢查是否無手機資料
+                        if (!item.phone_mask || item.phone_mask === '***' || item.phone_mask === '') {
+                            verifyPhone(true);
+                        } else {
+                            // 這裡加回手機提示：姓名加大，遮罩號碼變色突出
+                            document.getElementById('targetUser').innerHTML = `
+                                <p class="font-bold text-2xl mb-2">${item.name} 校友</p>
+                                <div class="bg-white p-3 rounded-lg border border-blue-100">
+                                    <p class="text-gray-500 text-sm font-bold mb-1">登記手機號碼為：</p>
+                                    <p class="text-2xl font-bold tracking-widest text-blue-700">${item.phone_mask}</p>
+                                </div>
+                            `;
+                            document.getElementById('step1').classList.add('hidden');
+                            document.getElementById('step2').classList.remove('hidden');
+                        }
+                    };
+                }
+                list.appendChild(div);
+            });
+        }
+
+        async function verifyPhone(skip = false) {
+            let phone = "";
+            if (!skip) {
+                phone = document.getElementById('phoneInput').value.trim();
+                if (!phone) return alert("請輸入手機號碼");
+            }
+            const res = await api({ action: 'verify', id: currentId, phone: phone });
+            if(res.success) {
+                rawFullData = res.fullData;
+                renderForm();
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.add('hidden');
+                document.getElementById('step3').classList.remove('hidden');
+            } else {
+                alert("驗證失敗，手機號碼不正確。若更換過手機，請洽櫃台人員。");
+            }
+        }
+
+        function renderForm() {
+            const form = document.getElementById('dynamicForm');
+            form.innerHTML = '';
+            Object.keys(rawFullData).forEach(key => {
+                if (!excludeFields.some(ex => key.includes(ex))) {
+                    const box = document.createElement('div');
+                    const label = document.createElement('label');
+                    const isReq = requiredFields.some(req => key.includes(req));
+                    
+                    label.className = "text-md font-bold text-gray-600 block mb-2";
+                    label.innerText = key + (isReq ? " *" : "");
+                    
+                    let input;
+                    if(key.includes('地址') || key.includes('備註')) {
+                        input = document.createElement('textarea');
+                        input.rows = 2;
+                    } else {
+                        input = document.createElement('input');
+                        input.type = "text";
+                    }
+                    input.id = `field_${key}`;
+                    input.value = rawFullData[key] || '';
+
+                    const isReadonly = readonlyFields.some(ro => key.includes(ro));
+                    if (isReadonly) {
+                        input.readOnly = true;
+                        input.className = "w-full field-readonly p-3 outline-none text-lg font-medium rounded-lg";
+                    } else {
+                        input.className = "w-full field-editable p-3 outline-none focus:bg-teal-50 text-xl font-bold rounded-lg";
+                    }
+                    
+                    box.appendChild(label);
+                    box.appendChild(input);
+                    form.appendChild(box);
+                }
+            });
+        }
+
+        async function updateData() {
+            let updateData = {};
+            let missingFields = [];
+            Object.keys(rawFullData).forEach(key => {
+                const el = document.getElementById(`field_${key}`);
+                if (el) {
+                    const val = el.value.trim();
+                    if (requiredFields.some(req => key.includes(req)) && !val) { missingFields.push(key); }
+                    updateData[key] = val;
+                }
+            });
+            if (missingFields.length > 0) {
+                alert("請務必填寫：\n" + missingFields.join(", "));
+                return;
+            }
+            const res = await api({ action: 'update', id: currentId, updateData: updateData });
+            if(res.success) {
+                document.getElementById('step3').classList.add('hidden');
+                document.getElementById('stepSuccess').classList.remove('hidden');
+            }
+        }
+
+        function goBack(step) {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.add('hidden');
+            document.getElementById('step' + step).classList.remove('hidden');
+            if(step === 2) document.getElementById('phoneInput').value = '';
+        }
+    </script>
+</body>
+</html>
