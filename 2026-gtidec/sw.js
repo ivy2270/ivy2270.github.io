@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dent-order-v4';
+const CACHE_NAME = 'dent-order-v5';
 const ASSETS = [
   './',
   './index.html',
