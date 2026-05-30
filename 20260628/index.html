@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>良宵音樂會 - 登記系統</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://font.emtech.cc/css/NotoSerifTC');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #1a1e24; 
+            background-image: linear-gradient(to bottom, #111418, #222831);
+            color: #e2e8f0;
+            font-family: 'Noto Serif TC', 'Microsoft JhengHei', serif;
+            line-height: 1.6;
+            padding: 20px 10px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: rgba(28, 33, 41, 0.85);
+            border: 1px solid #c9a054; 
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(199, 160, 84, 0.1);
+            overflow: hidden;
+            padding: 30px 25px;
+            margin-bottom: 30px;
+        }
+
+        .poster-container {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 1px dashed rgba(199, 160, 84, 0.3);
+            padding-bottom: 20px;
+        }
+
+        .poster-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            border: 1px solid rgba(199, 160, 84, 0.5);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+
+        .poster-placeholder {
+            width: 100%;
+            height: 220px;
+            background: linear-gradient(135deg, #1f252e, #13171d);
+            border: 1px dashed #c9a054;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #c9a054;
+            border-radius: 4px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #d4af37; 
+            font-size: 26px;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #a4b0be;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #d4af37;
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px 15px;
+            background-color: #13171d;
+            border: 1px solid #4a5568;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #d4af37;
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23d4af37'><polygon points='0,0 10,0 5,5'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #c9a054, #af8332);
+            border: none;
+            border-radius: 4px;
+            color: #111418;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #e0b865, #c9a054);
+            transform: translateY(-1px);
+        }
+
+        .panel {
+            display: none;
+            text-align: center;
+        }
+
+        .result-box {
+            background-color: #13171d;
+            border: 1px solid rgba(199, 160, 84, 0.3);
+            border-radius: 4px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 10px 0;
+        }
+
+        /* 後台 Admin 樣式 */
+        .admin-section {
+            display: none;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background-color: #13171d;
+            border: 1px solid rgba(199, 160, 84, 0.3);
+            border-radius: 4px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-card.total-card {
+            grid-column: span 2;
+            background: rgba(199, 160, 84, 0.08);
+        }
+
+        .stat-num {
+            font-size: 22px;
+            color: #d4af37;
+            font-weight: bold;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 15px;
+            border: 1px solid rgba(199, 160, 84, 0.3);
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            min-width: 500px;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            text-align: left;
+        }
+
+        th {
+            background-color: #13171d;
+            color: #d4af37;
+        }
+
+        /* 勾選美化與過渡效果 */
+        .check-td {
+            text-align: center;
+        }
+        .chk-box {
+            width: 18px;
+            height: 18px;
+            accent-color: #d4af37;
+            cursor: pointer;
+        }
+        .updating-row {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        
+        .toast-msg {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #c9a054;
+            color: #111418;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container" id="mainContainer">
+        
+        <div class="poster-container">
+            <div id="posterBox">
+    <img src="poster.png" alt="良宵音樂會海報">
+</div>
+        </div>
+
+        <div id="formPanel">
+            <h1>良宵音樂會</h1>
+            <div class="subtitle">取票登記系統</div>
+            
+            <form id="ticketForm" onsubmit="submitForm(event)">
+                <div class="form-group">
+                    <label for="pickerName">取票人</label>
+                    <input type="text" id="pickerName" required placeholder="請輸入取票人姓名">
+                </div>
+                <div class="form-group">
+                    <label for="ticketCount">張數</label>
+                    <input type="number" id="ticketCount" min="1" step="1" required placeholder="請輸入正整數張數" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                </div>
+                <div class="form-group">
+                    <label for="senderName">寄票人</label>
+                    <select id="senderName" required>
+                        <option value="" disabled selected>請選擇寄票人</option>
+                        <option value="楊泓霖">楊泓霖</option>
+                        <option value="陳怡姍">陳怡姍</option>
+                        <option value="毛明雯">毛明雯</option>
+                        <option value="劉欣鑫">劉欣鑫</option>
+                        <option value="詹雨璇">詹雨璇</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn" id="submitBtn">確認送出登記</button>
+            </form>
+        </div>
+
+        <div id="successPanel" class="panel">
+            <h1>✦ 登記成功 ✦</h1>
+            <div class="subtitle">資料已成功同步至系統資料庫</div>
+            <div class="result-box">
+                <div class="result-item"><span style="color:#a4b0be;">取票人</span><span id="resPicker"></span></div>
+                <div class="result-item"><span style="color:#a4b0be;">張數</span><span id="resCount"></span></div>
+                <div class="result-item"><span style="color:#a4b0be;">寄票人</span><span id="resSender"></span></div>
+            </div>
+            <button class="btn" onclick="resetForm()">再填一筆</button>
+        </div>
+
+        <div id="adminPanel" class="admin-section">
+            <h1>良宵後台管理</h1>
+            <div class="subtitle">實時數據核銷面板</div>
+            <div id="adminLoading" style="text-align:center; color:#c9a054;">正在安全連線至資料庫...</div>
+            <div id="adminError" style="text-align:center; color:#ff6b6b; display:none;"></div>
+
+            <div id="adminContent" style="display:none;">
+                <div class="stat-grid">
+                    <div class="stat-card total-card">
+                        <div style="color: #a4b0be; font-size: 13px;">總登記張數</div>
+                        <div class="stat-num" id="totalTickets">0 張</div>
+                    </div>
+                </div>
+                <div id="senderSummaryGrid" class="stat-grid" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));"></div>
+
+                <h3 style="color:#d4af37; margin: 20px 0 10px 0; font-size:15px;">✦ 登記名細與現場核銷</h3>
+                <div class="table-responsive">
+                    <table id="detailsTable">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center; width: 75px;">已取票</th>
+                                <th>取票人</th>
+                                <th>張數</th>
+                                <th>寄票人</th>
+                                <th>登記時間</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast-msg">狀態已同步雲端</div>
+
+<script>
+    // ⚠️ 請填入您的 GAS 新部署 URL ⚠️
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzdp7ZLHN8m_vEZB5pgwt0xsLPAX0ulrPbFIEsJlATmDjSCZDNhPfs0ut2FJ9EK8h2Z/exec";
+    let currentAdminPw = ""; 
+
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+        const pw = urlParams.get('pw');
+        if (mode === 'admin' && pw) {
+            currentAdminPw = pw;
+            document.getElementById('formPanel').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            fetchAdminData(pw);
+        }
+    };
+
+    // 1. 表單送出：採用 no-cors 確保本機直接點開也能成功寫入
+    function submitForm(e) {
+        e.preventDefault();
+        const picker = document.getElementById('pickerName').value.trim();
+        const count = document.getElementById('ticketCount').value;
+        const sender = document.getElementById('senderName').value;
+        const submitBtn = document.getElementById('submitBtn');
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = '正在同步資料庫...';
+
+        const searchParams = new URLSearchParams();
+        searchParams.append('action', 'submitForm');
+        searchParams.append('picker', picker);
+        searchParams.append('count', count);
+        searchParams.append('sender', sender);
+
+        fetch(GAS_WEB_APP_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', // 允許本機環境直接發送不檢查安全標頭
+            body: searchParams
+        })
+        .then(() => {
+            // 在 no-cors 模式下無法讀取內容，但只要沒噴 catch 就代表成功送達 GAS
+            document.getElementById('resPicker').innerText = picker;
+            document.getElementById('resCount').innerText = count + ' 張';
+            document.getElementById('resSender').innerText = sender;
+            document.getElementById('formPanel').style.display = 'none';
+            document.getElementById('successPanel').style.display = 'block';
+        })
+        .catch(err => { 
+            console.error(err);
+            alert('系統連線異常。'); 
+            resetSubmitButton(); 
+        });
+    }
+
+    function resetSubmitButton() {
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = false; btn.innerText = '確認送出登記';
+    }
+
+    function resetForm() {
+        document.getElementById('ticketForm').reset();
+        document.getElementById('successPanel').style.display = 'none';
+        document.getElementById('formPanel').style.display = 'block';
+        resetSubmitButton();
+    }
+
+    // 2. 讀取管理員資料：利用 JSONP 技術，本機 file:/// 也能暢行無阻地下載資料
+    function fetchAdminData(password) {
+        // 動態建立一個全域全域 callback 函式供 GAS 呼叫
+        window.onAdminDataReceived = function(data) {
+            if (data.status === 'error') {
+                document.getElementById('adminLoading').style.display = 'none';
+                const err = document.getElementById('adminError');
+                err.style.display = 'block'; err.innerText = '認證失敗：' + data.message;
+                return;
+            }
+            document.getElementById('adminLoading').style.display = 'none';
+            document.getElementById('adminContent').style.display = 'block';
+            document.getElementById('totalTickets').innerText = data.totalTickets + ' 張';
+
+            const grid = document.getElementById('senderSummaryGrid');
+            grid.innerHTML = '';
+            ['楊泓霖', '陳怡姍', '毛明雯', '劉欣鑫', '詹雨璇'].forEach(s => {
+                const c = data.senderSummary[s] || 0;
+                grid.innerHTML += `<div class="stat-card"><div style="color:#a4b0be; font-size:12px;">${s}</div><div class="stat-num" style="font-size:16px;">${c} 張</div></div>`;
+            });
+
+            const tbody = document.querySelector('#detailsTable tbody');
+            tbody.innerHTML = '';
+            if(data.details.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#a4b0be;">目前尚無登記資料</td></tr>';
+            } else {
+                data.details.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="check-td"><input type="checkbox" class="chk-box" ${row.isChecked ? 'checked' : ''} onchange="toggleCheck(this, '${encodeURIComponent(row.timestamp)}', '${encodeURIComponent(row.picker)}', '${encodeURIComponent(row.sender)}')"></td>
+                        <td style="font-weight:bold;">${row.picker}</td>
+                        <td style="color:#d4af37; font-weight:bold;">${row.count}</td>
+                        <td>${row.sender}</td>
+                        <td style="font-size:12px; color:#a4b0be;">${row.timestamp}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        };
+
+        // 注入 script 標籤 (JSONP)
+        const script = document.createElement('script');
+        script.src = `${GAS_WEB_APP_URL}?action=getAdminData&pw=${encodeURIComponent(password)}&callback=onAdminDataReceived`;
+        document.body.appendChild(script);
+    }
+
+    // 3. 後台即時核銷：同樣使用 no-cors 快速打勾更新
+    function toggleCheck(checkbox, encTime, encPicker, encSender) {
+        const tr = checkbox.parentElement.parentElement;
+        tr.classList.add('updating-row'); 
+
+        const searchParams = new URLSearchParams();
+        searchParams.append('action', 'updateCheckStatus');
+        searchParams.append('pw', currentAdminPw);
+        searchParams.append('timestamp', decodeURIComponent(encTime));
+        searchParams.append('picker', decodeURIComponent(encPicker));
+        searchParams.append('sender', decodeURIComponent(encSender));
+        searchParams.append('isChecked', checkbox.checked);
+
+        fetch(GAS_WEB_APP_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            body: searchParams
+        })
+        .then(() => {
+            tr.classList.remove('updating-row');
+            showToast(); // 顯示同步成功泡泡
+        })
+        .catch(err => {
+            console.error(err);
+            tr.classList.remove('updating-row');
+            alert('連線伺服器失敗。');
+            checkbox.checked = !checkbox.checked;
+        });
+    }
+
+    function showToast() {
+        const t = document.getElementById('toast');
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 2000);
+    }
+</script>
+</body>
+</html>
