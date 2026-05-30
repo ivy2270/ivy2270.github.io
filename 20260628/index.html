@@ -22,7 +22,7 @@
             color: #e2e8f0;
             font-family: 'Noto Serif TC', 'Microsoft JhengHei', serif;
             line-height: 1.6;
-            padding: 20px 10px;
+            padding: 12px 8px; /* 針對手機縮小邊距 */
             min-height: 100vh;
         }
 
@@ -34,10 +34,11 @@
             border-radius: 8px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(199, 160, 84, 0.1);
             overflow: hidden;
-            padding: 30px 25px;
-            margin-bottom: 30px;
+            padding: 20px 15px; /* 手機友好的內邊距 */
+            margin-bottom: 20px;
         }
 
+        /* 海報區塊 */
         .poster-container {
             width: 100%;
             text-align: center;
@@ -46,12 +47,12 @@
             padding-bottom: 20px;
         }
 
-        .poster-container img {
+        /* ✨ 修正：確保海報圖片不會超出外框，並保持比例 */
+        #posterBox img {
             max-width: 100%;
             height: auto;
             border-radius: 4px;
-            border: 1px solid rgba(199, 160, 84, 0.5);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         .poster-placeholder {
@@ -70,8 +71,8 @@
         h1 {
             text-align: center;
             color: #d4af37; 
-            font-size: 26px;
-            letter-spacing: 3px;
+            font-size: 24px;
+            letter-spacing: 2px;
             margin-bottom: 5px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
@@ -79,7 +80,7 @@
         .subtitle {
             text-align: center;
             color: #a4b0be;
-            font-size: 14px;
+            font-size: 13px;
             margin-bottom: 25px;
         }
 
@@ -162,7 +163,7 @@
             padding: 10px 0;
         }
 
-        /* 後台 Admin 樣式 */
+        /* 後台 Admin 專屬樣式 */
         .admin-section {
             display: none;
         }
@@ -170,15 +171,15 @@
         .stat-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 15px;
         }
 
         .stat-card {
             background-color: #13171d;
             border: 1px solid rgba(199, 160, 84, 0.3);
             border-radius: 4px;
-            padding: 12px;
+            padding: 10px;
             text-align: center;
         }
 
@@ -188,47 +189,64 @@
         }
 
         .stat-num {
-            font-size: 22px;
+            font-size: 20px;
             color: #d4af37;
             font-weight: bold;
         }
 
+        /* 📱 手機 RWD 極致防崩壞表格 */
         .table-responsive {
             width: 100%;
-            overflow-x: auto;
+            overflow-x: auto; /* 允許左右滑動 */
             margin-top: 15px;
             border: 1px solid rgba(199, 160, 84, 0.3);
             border-radius: 4px;
+            background-color: #13171d;
+            -webkit-overflow-scrolling: touch; /* 讓手機滑動更流暢 */
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
-            min-width: 500px;
+            table-layout: auto; /* 讓欄位根據設定的寬度自動撐開 */
         }
 
         th, td {
-            padding: 10px 12px;
+            padding: 12px 10px;
             border-bottom: 1px solid rgba(255,255,255,0.05);
             text-align: left;
+            white-space: nowrap; /* 🚀 核心：強制文字不換行 */
         }
 
         th {
-            background-color: #13171d;
+            background-color: #1c2129;
             color: #d4af37;
+            font-weight: bold;
+            position: sticky;
+            top: 0; /* 滾動時固定表頭 */
         }
 
-        /* 勾選美化與過渡效果 */
+        /* 精準控制每個欄位的寬度比例 */
+        .col-check { width: 65px; text-align: center; }
+        .col-picker { min-width: 90px; }
+        .col-count  { min-width: 60px; text-align: center; }
+        .col-sender { min-width: 90px; }
+        .col-time   { min-width: 70px; text-align: center; }
+
         .check-td {
             text-align: center;
         }
+        
+        /* 放大手機上的 Checkbox 點擊範圍，更好操作 */
         .chk-box {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             accent-color: #d4af37;
             cursor: pointer;
+            vertical-align: middle;
         }
+        
         .updating-row {
             opacity: 0.4;
             pointer-events: none;
@@ -251,14 +269,17 @@
 </head>
 <body>
 
+    <!-- ✨ 修正：加上 id="posterArea" 讓 JavaScript 管理員模式可以正確隱藏此區塊 -->
     <div class="container" id="mainContainer">
         
-        <div class="poster-container">
+        <!-- 海報放置區塊 -->
+         <div class="poster-container" id="posterArea">
             <div id="posterBox">
-    <img src="poster.png" alt="良宵音樂會海報">
-</div>
+                <img src="poster.png" alt="良宵音樂會海報">
+            </div>
         </div>
 
+        <!-- 1. 表單填寫面 -->
         <div id="formPanel">
             <h1>良宵音樂會</h1>
             <div class="subtitle">取票登記系統</div>
@@ -287,6 +308,7 @@
             </form>
         </div>
 
+        <!-- 2. 登記成功面板 -->
         <div id="successPanel" class="panel">
             <h1>✦ 登記成功 ✦</h1>
             <div class="subtitle">資料已成功同步至系統資料庫</div>
@@ -298,6 +320,7 @@
             <button class="btn" onclick="resetForm()">再填一筆</button>
         </div>
 
+        <!-- 3. 管理員後台面板 -->
         <div id="adminPanel" class="admin-section">
             <h1>良宵後台管理</h1>
             <div class="subtitle">實時數據核銷面板</div>
@@ -311,18 +334,18 @@
                         <div class="stat-num" id="totalTickets">0 張</div>
                     </div>
                 </div>
-                <div id="senderSummaryGrid" class="stat-grid" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));"></div>
+                <div id="senderSummaryGrid" class="stat-grid" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px;"></div>
 
-                <h3 style="color:#d4af37; margin: 20px 0 10px 0; font-size:15px;">✦ 登記名細與現場核銷</h3>
+                <h3 style="color:#d4af37; margin: 15px 0 8px 0; font-size:14px;">✦ 登記名細（可左右滑動）</h3>
                 <div class="table-responsive">
                     <table id="detailsTable">
                         <thead>
                             <tr>
-                                <th style="text-align:center; width: 75px;">已取票</th>
-                                <th>取票人</th>
-                                <th>張數</th>
-                                <th>寄票人</th>
-                                <th>登記時間</th>
+                                <th class="col-check">已取票</th>
+                                <th class="col-picker">取票人</th>
+                                <th class="col-count">張數</th>
+                                <th class="col-sender">寄票人</th>
+                                <th class="col-time">日期</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -334,153 +357,159 @@
 
     <div id="toast" class="toast-msg">狀態已同步雲端</div>
 
-<script>
-    // ⚠️ 請填入您的 GAS 新部署 URL ⚠️
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzdp7ZLHN8m_vEZB5pgwt0xsLPAX0ulrPbFIEsJlATmDjSCZDNhPfs0ut2FJ9EK8h2Z/exec";
-    let currentAdminPw = ""; 
+    <script>
+        // ⚠️ 請填入您的 GAS 部署 URL ⚠️
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzdp7ZLHN8m_vEZB5pgwt0xsLPAX0ulrPbFIEsJlATmDjSCZDNhPfs0ut2FJ9EK8h2Z/exec";
+        let currentAdminPw = ""; 
 
-    window.onload = function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const mode = urlParams.get('mode');
-        const pw = urlParams.get('pw');
-        if (mode === 'admin' && pw) {
-            currentAdminPw = pw;
-            document.getElementById('formPanel').style.display = 'none';
-            document.getElementById('adminPanel').style.display = 'block';
-            fetchAdminData(pw);
-        }
-    };
-
-    // 1. 表單送出：採用 no-cors 確保本機直接點開也能成功寫入
-    function submitForm(e) {
-        e.preventDefault();
-        const picker = document.getElementById('pickerName').value.trim();
-        const count = document.getElementById('ticketCount').value;
-        const sender = document.getElementById('senderName').value;
-        const submitBtn = document.getElementById('submitBtn');
-
-        submitBtn.disabled = true;
-        submitBtn.innerText = '正在同步資料庫...';
-
-        const searchParams = new URLSearchParams();
-        searchParams.append('action', 'submitForm');
-        searchParams.append('picker', picker);
-        searchParams.append('count', count);
-        searchParams.append('sender', sender);
-
-        fetch(GAS_WEB_APP_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', // 允許本機環境直接發送不檢查安全標頭
-            body: searchParams
-        })
-        .then(() => {
-            // 在 no-cors 模式下無法讀取內容，但只要沒噴 catch 就代表成功送達 GAS
-            document.getElementById('resPicker').innerText = picker;
-            document.getElementById('resCount').innerText = count + ' 張';
-            document.getElementById('resSender').innerText = sender;
-            document.getElementById('formPanel').style.display = 'none';
-            document.getElementById('successPanel').style.display = 'block';
-        })
-        .catch(err => { 
-            console.error(err);
-            alert('系統連線異常。'); 
-            resetSubmitButton(); 
-        });
-    }
-
-    function resetSubmitButton() {
-        const btn = document.getElementById('submitBtn');
-        btn.disabled = false; btn.innerText = '確認送出登記';
-    }
-
-    function resetForm() {
-        document.getElementById('ticketForm').reset();
-        document.getElementById('successPanel').style.display = 'none';
-        document.getElementById('formPanel').style.display = 'block';
-        resetSubmitButton();
-    }
-
-    // 2. 讀取管理員資料：利用 JSONP 技術，本機 file:/// 也能暢行無阻地下載資料
-    function fetchAdminData(password) {
-        // 動態建立一個全域全域 callback 函式供 GAS 呼叫
-        window.onAdminDataReceived = function(data) {
-            if (data.status === 'error') {
-                document.getElementById('adminLoading').style.display = 'none';
-                const err = document.getElementById('adminError');
-                err.style.display = 'block'; err.innerText = '認證失敗：' + data.message;
-                return;
-            }
-            document.getElementById('adminLoading').style.display = 'none';
-            document.getElementById('adminContent').style.display = 'block';
-            document.getElementById('totalTickets').innerText = data.totalTickets + ' 張';
-
-            const grid = document.getElementById('senderSummaryGrid');
-            grid.innerHTML = '';
-            ['楊泓霖', '陳怡姍', '毛明雯', '劉欣鑫', '詹雨璇'].forEach(s => {
-                const c = data.senderSummary[s] || 0;
-                grid.innerHTML += `<div class="stat-card"><div style="color:#a4b0be; font-size:12px;">${s}</div><div class="stat-num" style="font-size:16px;">${c} 張</div></div>`;
-            });
-
-            const tbody = document.querySelector('#detailsTable tbody');
-            tbody.innerHTML = '';
-            if(data.details.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#a4b0be;">目前尚無登記資料</td></tr>';
-            } else {
-                data.details.forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="check-td"><input type="checkbox" class="chk-box" ${row.isChecked ? 'checked' : ''} onchange="toggleCheck(this, '${encodeURIComponent(row.timestamp)}', '${encodeURIComponent(row.picker)}', '${encodeURIComponent(row.sender)}')"></td>
-                        <td style="font-weight:bold;">${row.picker}</td>
-                        <td style="color:#d4af37; font-weight:bold;">${row.count}</td>
-                        <td>${row.sender}</td>
-                        <td style="font-size:12px; color:#a4b0be;">${row.timestamp}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+            const pw = urlParams.get('pw');
+            if (mode === 'admin' && pw) {
+                currentAdminPw = pw;
+                // 🚀 亮點 1：管理模式下直接隱藏海報區塊
+                document.getElementById('posterArea').style.display = 'none';
+                document.getElementById('formPanel').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                fetchAdminData(pw);
             }
         };
 
-        // 注入 script 標籤 (JSONP)
-        const script = document.createElement('script');
-        script.src = `${GAS_WEB_APP_URL}?action=getAdminData&pw=${encodeURIComponent(password)}&callback=onAdminDataReceived`;
-        document.body.appendChild(script);
-    }
+        function submitForm(e) {
+            e.preventDefault();
+            const picker = document.getElementById('pickerName').value.trim();
+            const count = document.getElementById('ticketCount').value;
+            const sender = document.getElementById('senderName').value;
+            const submitBtn = document.getElementById('submitBtn');
 
-    // 3. 後台即時核銷：同樣使用 no-cors 快速打勾更新
-    function toggleCheck(checkbox, encTime, encPicker, encSender) {
-        const tr = checkbox.parentElement.parentElement;
-        tr.classList.add('updating-row'); 
+            submitBtn.disabled = true;
+            submitBtn.innerText = '正在同步資料庫...';
 
-        const searchParams = new URLSearchParams();
-        searchParams.append('action', 'updateCheckStatus');
-        searchParams.append('pw', currentAdminPw);
-        searchParams.append('timestamp', decodeURIComponent(encTime));
-        searchParams.append('picker', decodeURIComponent(encPicker));
-        searchParams.append('sender', decodeURIComponent(encSender));
-        searchParams.append('isChecked', checkbox.checked);
+            const searchParams = new URLSearchParams();
+            searchParams.append('action', 'submitForm');
+            searchParams.append('picker', picker);
+            searchParams.append('count', count);
+            searchParams.append('sender', sender);
 
-        fetch(GAS_WEB_APP_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', 
-            body: searchParams
-        })
-        .then(() => {
-            tr.classList.remove('updating-row');
-            showToast(); // 顯示同步成功泡泡
-        })
-        .catch(err => {
-            console.error(err);
-            tr.classList.remove('updating-row');
-            alert('連線伺服器失敗。');
-            checkbox.checked = !checkbox.checked;
-        });
-    }
+            fetch(GAS_WEB_APP_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: searchParams
+            })
+            .then(() => {
+                document.getElementById('resPicker').innerText = picker;
+                document.getElementById('resCount').innerText = count + ' 張';
+                document.getElementById('resSender').innerText = sender;
+                document.getElementById('formPanel').style.display = 'none';
+                document.getElementById('successPanel').style.display = 'block';
+            })
+            .catch(err => { 
+                console.error(err);
+                alert('系統連線異常。'); 
+                resetSubmitButton(); 
+            });
+        }
 
-    function showToast() {
-        const t = document.getElementById('toast');
-        t.style.display = 'block';
-        setTimeout(() => { t.style.display = 'none'; }, 2000);
-    }
-</script>
+        function resetSubmitButton() {
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = false; btn.innerText = '確認送出登記';
+        }
+
+        function resetForm() {
+            document.getElementById('ticketForm').reset();
+            document.getElementById('successPanel').style.display = 'none';
+            document.getElementById('formPanel').style.display = 'block';
+            resetSubmitButton();
+        }
+
+        function fetchAdminData(password) {
+            window.onAdminDataReceived = function(data) {
+                if (data.status === 'error') {
+                    document.getElementById('adminLoading').style.display = 'none';
+                    const err = document.getElementById('adminError');
+                    err.style.display = 'block'; err.innerText = '認證失敗：' + data.message;
+                    return;
+                }
+                document.getElementById('adminLoading').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                document.getElementById('totalTickets').innerText = data.totalTickets + ' 張';
+
+                const grid = document.getElementById('senderSummaryGrid');
+                grid.innerHTML = '';
+                ['楊泓霖', '陳怡姍', '毛明雯', '劉欣鑫', '詹雨璇'].forEach(s => {
+                    const c = data.senderSummary[s] || 0;
+                    grid.innerHTML += `<div class="stat-card"><div style="color:#a4b0be; font-size:11px;">${s}</div><div class="stat-num" style="font-size:14px;">${c} 張</div></div>`;
+                });
+
+                const tbody = document.querySelector('#detailsTable tbody');
+                tbody.innerHTML = '';
+                if(data.details.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#a4b0be;">目前尚無登記資料</td></tr>';
+                } else {
+                    data.details.forEach(row => {
+                        // 🚀 亮點 2：精簡時間，只保留「MM/DD」格式
+                        let shortDate = row.timestamp; 
+                        if (row.timestamp && row.timestamp.includes(' ')) {
+                            const datePart = row.timestamp.split(' ')[0]; // 拿 2026/05/30
+                            const parts = datePart.split('/');
+                            if (parts.length === 3) {
+                                shortDate = parts[1] + '/' + parts[2]; // 變成 05/30
+                            }
+                        }
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="check-td"><input type="checkbox" class="chk-box" ${row.isChecked ? 'checked' : ''} onchange="toggleCheck(this, '${encodeURIComponent(row.timestamp)}', '${encodeURIComponent(row.picker)}', '${encodeURIComponent(row.sender)}')"></td>
+                            <td style="font-weight:bold;">${row.picker}</td>
+                            <td class="col-count" style="color:#d4af37; font-weight:bold;">${row.count}</td>
+                            <td>${row.sender}</td>
+                            <td class="col-time" style="font-size:12px; color:#a4b0be;">${shortDate}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            };
+
+            const script = document.createElement('script');
+            script.src = `${GAS_WEB_APP_URL}?action=getAdminData&pw=${encodeURIComponent(password)}&callback=onAdminDataReceived`;
+            document.body.appendChild(script);
+        }
+
+        function toggleCheck(checkbox, encTime, encPicker, encSender) {
+            const tr = checkbox.parentElement.parentElement;
+            tr.classList.add('updating-row'); 
+
+            const searchParams = new URLSearchParams();
+            searchParams.append('action', 'updateCheckStatus');
+            searchParams.append('pw', currentAdminPw);
+            searchParams.append('timestamp', decodeURIComponent(encTime));
+            searchParams.append('picker', decodeURIComponent(encPicker));
+            searchParams.append('sender', decodeURIComponent(encSender));
+            searchParams.append('isChecked', checkbox.checked);
+
+            fetch(GAS_WEB_APP_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: searchParams
+            })
+            .then(() => {
+                tr.classList.remove('updating-row');
+                showToast(); 
+            })
+            .catch(err => {
+                console.error(err);
+                tr.classList.remove('updating-row');
+                alert('連線伺服器失敗。');
+                checkbox.checked = !checkbox.checked;
+            });
+        }
+
+        function showToast() {
+            const t = document.getElementById('toast');
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 2000);
+        }
+    </script>
 </body>
 </html>
