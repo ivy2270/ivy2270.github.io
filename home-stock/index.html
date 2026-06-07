@@ -81,6 +81,40 @@
 
     #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1200; justify-content: center; align-items: center; cursor: zoom-out; }
     #lightbox img { max-width: 90%; max-height: 80%; border-radius: 12px; border: 4px solid white; }
+
+    /* ── 批次選擇清單 ── */
+    .batch-list { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .batch-card {
+      display: flex; align-items: center; gap: 12px;
+      border: 2px solid #EEE; border-radius: 15px; padding: 10px 12px;
+      cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      background: white;
+    }
+    .batch-card:hover  { border-color: var(--primary); background: #F0F7F2; }
+    .batch-card.selected { border-color: var(--primary); background: #E6F4EC; box-shadow: 0 0 0 3px rgba(142,182,155,0.25); }
+    .batch-card .badge {
+      display: flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #EEE; color: #888; font-size: 13px; flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+    }
+    .batch-card.selected .badge { background: var(--primary); color: white; }
+    .batch-expiry-warn  { color: #F0AD4E; font-weight: bold; }
+    .batch-expiry-alert { color: #D9534F; font-weight: bold; }
+
+    /* ── 拍照按鈕區 ── */
+    .photo-btns { display: flex; gap: 10px; }
+    .photo-btns .btn-photo {
+      flex: 1; padding: 14px 8px; border: 2px dashed #DDD; border-radius: 12px;
+      background: #FAFAFA; cursor: pointer; font-size: 14px; font-weight: bold;
+      color: var(--text); font-family: 'JFOpenHuninn'; transition: border-color 0.2s, background 0.2s;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .photo-btns .btn-photo:hover { border-color: var(--primary); background: #F0F7F2; }
+    .photo-btns .btn-photo i { font-size: 22px; color: var(--primary); }
+    /* 隱藏原生 file input */
+    #pImgCamera, #pImgFile { display: none; }
+    #imgStatus { font-size: 12px; color: var(--primary); margin-top: 8px; font-weight: bold; text-align: center; }
   </style>
 </head>
 <body>
@@ -97,38 +131,57 @@
     <div class="tab" data-tab="query" onclick="switchTab('query')"><i class="fa-solid fa-list-check"></i>庫存清單</div>
   </div>
 
+  <!-- ══════════ 領用 ══════════ -->
   <div id="usageSection" class="content active">
     <label><i class="fa-solid fa-tag"></i> 品項類型:</label>
-    <select id="uCategory" onchange="updateBatchPreview()"></select>
-    <div id="batchPreview" style="margin-top:15px; display:none;">
-      <div class="card" style="background:#F0F7F2; border:none;">
-        <img id="uPreviewImg" class="img-preview" src="" onclick="zoomImg(this.src)" referrerpolicy="no-referrer">
-        <div style="flex:1">
-          <div id="uPreviewName" style="font-weight:bold;">--</div>
-          <div style="font-size:12px; color:#666;">最近效期：<span id="uPreviewExpiry">--</span></div>
-          <div class="stock-tag" style="background:var(--secondary); display:inline-block; margin-top:5px;">剩餘：<span id="uPreviewRemain">--</span></div>
-        </div>
-      </div>
+    <select id="uCategory" onchange="loadBatchList()"></select>
+
+    <!-- 批次清單（點選領用） -->
+    <div id="batchListWrap" style="display:none;">
+      <label style="margin-top:14px;"><i class="fa-solid fa-layer-group"></i> 選擇要領用的批次:</label>
+      <div id="batchList" class="batch-list"></div>
     </div>
+
+    <!-- 沒有庫存時的提示 -->
+    <div id="noStockMsg" style="display:none; text-align:center; color:#aaa; padding:20px 0; font-size:14px;">
+      <i class="fa-solid fa-box-open" style="font-size:28px; display:block; margin-bottom:8px;"></i>
+      此品項目前無庫存
+    </div>
+
     <label><i class="fa-solid fa-calculator"></i> 使用數量:</label>
     <input type="number" id="uQty" value="1" min="1">
-    <button class="btn-main" onclick="submitUsage()" id="btnU"><i class="fa-solid fa-check"></i>確認領用</button>
+    <button class="btn-main" onclick="submitUsage()" id="btnU" disabled>
+      <i class="fa-solid fa-check"></i>確認領用
+    </button>
   </div>
 
+  <!-- ══════════ 進貨 ══════════ -->
   <div id="purchaseSection" class="content">
     <label><i class="fa-solid fa-calendar-day"></i> 日期:</label><input type="date" id="pDate">
     <label><i class="fa-solid fa-layer-group"></i> 品項類型:</label><select id="pCategory"></select>
     <label><i class="fa-solid fa-pen-to-square"></i> 詳細名稱:</label><input type="text" id="pName" placeholder="例如：超柔感牙膏">
     <label><i class="fa-solid fa-boxes-stacked"></i> 進貨數量:</label><input type="number" id="pQty" placeholder="0" min="1">
     <label><i class="fa-solid fa-hourglass-end"></i> 保存期限:</label><input type="date" id="pExpiry">
+
     <label><i class="fa-solid fa-camera"></i> 品項照片:</label>
-    <div style="border: 2px dashed #DDD; border-radius: 12px; padding: 20px; text-align: center; background: #FAFAFA;">
-      <input type="file" id="pImgFile" accept="image/*" onchange="handleImageUpload(this)">
-      <div id="imgStatus" style="font-size:12px; color:var(--primary); margin-top:8px; font-weight:bold;">尚未拍照</div>
+    <!-- 隱藏的 file inputs -->
+    <input type="file" id="pImgCamera" accept="image/*" capture="environment" onchange="handleImageUpload(this)">
+    <input type="file" id="pImgFile"   accept="image/*"                       onchange="handleImageUpload(this)">
+    <!-- 兩顆視覺按鈕 -->
+    <div class="photo-btns">
+      <button type="button" class="btn-photo" onclick="document.getElementById('pImgCamera').click()">
+        <i class="fa-solid fa-camera"></i>直接拍照
+      </button>
+      <button type="button" class="btn-photo" onclick="document.getElementById('pImgFile').click()">
+        <i class="fa-solid fa-image"></i>從相簿選
+      </button>
     </div>
+    <div id="imgStatus"><i class="fa-solid fa-circle-question"></i> 尚未拍照</div>
+
     <button class="btn-main" onclick="submitPurchase()" id="btnP"><i class="fa-solid fa-truck-ramp-box"></i>確認入庫</button>
   </div>
 
+  <!-- ══════════ 庫存清單 ══════════ -->
   <div id="querySection" class="content">
     <div style="display: flex; gap: 10px; margin-bottom: 20px;">
       <button onclick="openModal('purchase')" style="flex:1; background:#6b8e76; color:white; font-size:14px; border-radius:12px;"><i class="fa-solid fa-box-open"></i> 查進貨</button>
@@ -150,18 +203,19 @@
 <div id="lightbox" onclick="this.style.display='none'"><img id="lightboxImg"></div>
 
 <script>
-  // 請確認更換為你最新的部署 URL
+  // ── 請確認更換為你最新的部署 URL ──
   const GAS_URL = "https://script.google.com/macros/s/AKfycby7GcMMd5e1ImJBehbUC0eeAQe_k-zEy7gczF0ga6q09h07-E1u6Fsd-UQWtKjU4f9Avg/exec"; 
   
   let localCache = { inventory: [], batches: {}, lastUpdate: null };
   let currentWebpBase64 = "";
+  let selectedBatch = null; // 目前在領用頁面選中的批次物件
 
   window.onload = () => {
     resetPurchaseDate();
     initAllData();
   };
 
-  // 重置進貨日期為今天
+  // ── 重置進貨日期為今天 ──
   function resetPurchaseDate() {
     const now = new Date();
     const y = now.getFullYear();
@@ -170,10 +224,10 @@
     document.getElementById('pDate').value = `${y}-${m}-${d}`;
   }
 
-async function initAllData(isRefresh = false) {
-    if(!isRefresh) document.getElementById('status').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在同步雲端資料...';
+  // ── 初始化全部資料 ──
+  async function initAllData(isRefresh = false) {
+    if (!isRefresh) document.getElementById('status').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在同步雲端資料...';
     
-    // --- 新增：先記住目前進貨頁面選了什麼 ---
     const currentPCat = document.getElementById('pCategory').value;
     const currentUCat = document.getElementById('uCategory').value;
 
@@ -188,7 +242,6 @@ async function initAllData(isRefresh = false) {
         document.getElementById('uCategory').innerHTML = options;
         document.getElementById('pCategory').innerHTML = options;
 
-        // --- 新增：將剛才記住的選項填回去 (如果該類別還存在的話) ---
         if (isRefresh) {
           if (currentPCat) document.getElementById('pCategory').value = currentPCat;
           if (currentUCat) document.getElementById('uCategory').value = currentUCat;
@@ -196,172 +249,194 @@ async function initAllData(isRefresh = false) {
 
         await preloadAllBatches();
         document.getElementById('status').innerHTML = '<i class="fa-solid fa-circle-check"></i> 同步完成 (' + localCache.lastUpdate.toLocaleTimeString() + ')';
-        updateBatchPreview(); 
-        if(document.getElementById('querySection').classList.contains('active')) renderInventory();
+        loadBatchList();
+        if (document.getElementById('querySection').classList.contains('active')) renderInventory();
       }
     } catch(e) { 
       document.getElementById('status').innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> 同步失敗';
       showToast("連線失敗，請檢查網路");
     }
-}
+  }
 
+  // ── 預載所有品項的批次清單（快取用） ──
   async function preloadAllBatches() {
     const categories = localCache.inventory.map(i => i.category);
-    await Promise.all(categories.map(cat => getBatchWithCache(cat)));
+    await Promise.all(categories.map(cat => getAllBatchesWithCache(cat)));
   }
 
-  async function getBatchWithCache(category) {
+  // ── 取得某品項的所有剩餘批次（含快取）──
+  async function getAllBatchesWithCache(category) {
     if (localCache.batches[category]) return localCache.batches[category];
     try {
-        const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getFirstBatch", category }) });
-        const json = await res.json();
-        localCache.batches[category] = json.data;
-        return json.data;
-    } catch(e) { return null; }
+      const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "getAllBatches", category }) });
+      const json = await res.json();
+      localCache.batches[category] = json.data || [];
+      return localCache.batches[category];
+    } catch(e) { return []; }
   }
 
+  // ── 切換 Tab ──
   function switchTab(mode) {
     document.querySelectorAll('.tab, .content').forEach(el => el.classList.remove('active'));
     document.querySelector(`[data-tab="${mode}"]`).classList.add('active');
     document.getElementById(mode + 'Section').classList.add('active');
-    if(mode === 'query') renderInventory();
-    if(mode === 'usage') updateBatchPreview();
+    if (mode === 'query') renderInventory();
+    if (mode === 'usage') loadBatchList();
   }
 
-  async function updateBatchPreview() {
+  // ── 領用頁：載入批次清單 ──
+  async function loadBatchList() {
     const category = document.getElementById('uCategory').value;
-    const data = await getBatchWithCache(category);
-    const box = document.getElementById('batchPreview');
-    if (data) {
-      document.getElementById('uPreviewImg').src = data.imgId || 'https://via.placeholder.com/100?text=No+Img';
-      document.getElementById('uPreviewName').innerText = data.name || category;
-	  document.getElementById('uPreviewExpiry').innerText = data.expiry ? data.expiry.substring(0,10) : '無';
-      document.getElementById('uPreviewRemain').innerText = data.remain;
-      box.style.display = 'block';
-    } else { box.style.display = 'none'; }
-  }
-  
-function renderInventory() {
-    const listDiv = document.getElementById('inventoryList');
-    const now = new Date();
-    // 設定今天中午，避免時區導致 diffDays 計算差一天的問題
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+    if (!category) return;
 
-    listDiv.innerHTML = localCache.inventory.map(item => {
-      const batchData = localCache.batches[item.category];
-      const imgUrl = batchData ? batchData.imgId : 'https://via.placeholder.com/100?text=No+Img';
-      
-      let expiryStr = '尚未記錄';
-      let expiryStyle = 'color:#666'; 
+    selectedBatch = null;
+    document.getElementById('btnU').disabled = true;
 
-      if (batchData && batchData.expiry) {
-        // 直接使用 GAS 傳過來的文字
-        const rawExpiry = batchData.expiry.substring(0, 10); 
-        expiryStr = rawExpiry;
+    const batches = await getAllBatchesWithCache(category);
+    const listWrap = document.getElementById('batchListWrap');
+    const noStock  = document.getElementById('noStockMsg');
+    const listDiv  = document.getElementById('batchList');
 
-        // 計算天數差異：強制設定為中午，消除時區邊際誤差
-        const parts = rawExpiry.split(/[-/]/); // 支援 - 或 /
-        const expDate = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0); 
-        const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+    if (!batches || batches.length === 0) {
+      listWrap.style.display = 'none';
+      noStock.style.display  = 'block';
+      return;
+    }
 
-        if (diffDays < 0) {
-          expiryStr += " (已過期)";
-          expiryStyle = "color: #D9534F; font-weight: bold;"; 
-        } else if (diffDays <= 30) {
-          expiryStr += ` (剩 ${diffDays} 天)`;
-          expiryStyle = "color: #FF4D4D; font-weight: bold;"; 
-        } else if (diffDays <= 90) {
-          expiryStr += ` (剩 ${diffDays} 天)`;
-          expiryStyle = "color: #F0AD4E; font-weight: bold;"; 
-        }
+    noStock.style.display  = 'none';
+    listWrap.style.display = 'block';
+
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+
+    listDiv.innerHTML = batches.map((b, idx) => {
+      // 效期顏色
+      let expiryClass = '';
+      let expiryLabel = b.expiry ? b.expiry.substring(0, 10) : '無效期';
+      if (b.expiry) {
+        const parts = b.expiry.substring(0, 10).split(/[-/]/);
+        const expDate = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+        const diff = Math.ceil((expDate - today) / 86400000);
+        if (diff < 0)       { expiryLabel += ' (已過期)';      expiryClass = 'batch-expiry-alert'; }
+        else if (diff <= 30){ expiryLabel += ` (剩${diff}天)`; expiryClass = 'batch-expiry-alert'; }
+        else if (diff <= 90){ expiryLabel += ` (剩${diff}天)`; expiryClass = 'batch-expiry-warn';  }
       }
-      
-      return `
-        <div class="card">
-          <img class="img-preview" src="${imgUrl}" onclick="zoomImg(this.src)" referrerpolicy="no-referrer">
-          <div style="flex:1">
-            <div style="font-weight:bold">${item.category}</div>
-            <div style="font-size:12px; color:#999">最近效期：<span style="${expiryStyle}">${expiryStr}</span></div>
-            <div style="font-size:12px; color:#999">目前存量：<b style="color:var(--primary); font-size:16px;">${item.currentStock}</b></div>
-          </div>
-          <div class="stock-tag" style="background:${item.currentStock <= item.safeStock ? 'var(--accent)' : 'var(--secondary)'}">
-            ${item.currentStock <= item.safeStock ? '<i class="fa-solid fa-triangle-exclamation"></i> 補貨中' : '<i class="fa-solid fa-square-check"></i> 充足'}
-          </div>
-        </div>`;
-    }).join('');
-}
 
-  function showToast(msg) {
-    const t = document.getElementById("toast");
-    t.innerText = msg;
-    t.className = "show";
-    setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
+      const nameLabel = b.name ? `${b.name}` : category;
+      const isFIFO    = idx === 0; // 第一張是先進先出建議批次
+
+      return `
+      <div class="batch-card" id="bcard-${idx}" onclick="selectBatch(${idx})">
+        <img class="img-preview" src="${b.imgId || 'https://via.placeholder.com/100?text=No+Img'}"
+             onclick="event.stopPropagation(); zoomImg(this.src)" referrerpolicy="no-referrer"
+             style="width:56px; height:56px; flex-shrink:0;">
+        <div style="flex:1; font-size:13px; line-height:1.5;">
+          <div style="font-weight:bold;">${nameLabel}
+            ${isFIFO ? '<span style="font-size:11px; background:var(--secondary); padding:2px 7px; border-radius:8px; margin-left:4px;">先進先出</span>' : ''}
+          </div>
+          <div class="${expiryClass}"><i class="fa-solid fa-hourglass-half" style="font-size:11px;"></i> ${expiryLabel}</div>
+          <div style="color:#888;">剩餘：<b style="color:var(--primary);">${b.remain}</b></div>
+        </div>
+        <div class="badge"><i class="fa-solid fa-check" style="font-size:12px;"></i></div>
+      </div>`;
+    }).join('');
+
+    // 預設選中第一張（先進先出）
+    selectBatch(0);
   }
 
+  // ── 點選某批次 ──
+  function selectBatch(idx) {
+    const category = document.getElementById('uCategory').value;
+    const batches  = localCache.batches[category];
+    if (!batches || !batches[idx]) return;
+
+    // 移除所有已選
+    document.querySelectorAll('.batch-card').forEach(el => el.classList.remove('selected'));
+    const card = document.getElementById(`bcard-${idx}`);
+    if (card) card.classList.add('selected');
+
+    selectedBatch = batches[idx];
+    document.getElementById('btnU').disabled = false;
+  }
+
+  // ── 確認領用 ──
   async function submitUsage() {
+    if (!selectedBatch) return showToast("請先選擇要領用的批次");
+    const qty = Number(document.getElementById('uQty').value);
+    if (!qty || qty < 1) return showToast("請填寫數量");
+    if (qty > Number(selectedBatch.remain)) return showToast(`數量超過此批次剩餘 (${selectedBatch.remain})`);
+
     const btn = document.getElementById('btnU');
     btn.disabled = true;
     try {
-      const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "deduct", category: document.getElementById('uCategory').value, amount: document.getElementById('uQty').value })});
+      const payload = {
+        action:    "deductSpecific",
+        batchId:   selectedBatch.batchId,
+        category:  document.getElementById('uCategory').value,
+        name:      selectedBatch.name || "",
+        imgId:     selectedBatch.imgId || "",
+        amount:    qty
+      };
+      const res    = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
       const result = await res.json();
-      showToast(result.message);
-      document.getElementById('uQty').value = 1; // 領用後數量重置為 1
-      localCache.batches = {}; 
-      await initAllData(true);
-    } finally { btn.disabled = false; }
+      if (result.status === "success") {
+        showToast(result.message);
+        document.getElementById('uQty').value = 1;
+        selectedBatch = null;
+        localCache.batches = {};
+        await initAllData(true);
+      } else {
+        showToast(result.message || "發生錯誤");
+        btn.disabled = false;
+      }
+    } catch(e) {
+      showToast("傳送失敗，請稍後再試");
+      btn.disabled = false;
+    }
   }
 
-function clearPurchaseForm() {
-  // --- 1. 執行清空的欄位 ---
-  document.getElementById('pName').value = "";   // 詳細名稱清空
-  document.getElementById('pQty').value = "";    // 數量清空
-  
-  // --- 2. 徹底重置照片與內部變數 ---
-  document.getElementById('pImgFile').value = ""; // 檔案選擇器路徑重置
-  currentWebpBase64 = "";                         // 圖片變數清空
-  document.getElementById('imgStatus').innerHTML = '<i class="fa-solid fa-circle-question"></i> 尚未拍照';
-  
-  // --- 3. 保留不變的欄位 ---
-  // pCategory (品項) 不動
-  // pDate (進貨日) 不動
-  // pExpiry (效期) 不動，讓使用者可以連續輸入同效期的產品
-  
-  // --- 4. 視覺反饋：讓保留的欄位輕微閃爍 ---
-  const stayFields = ['pCategory', 'pExpiry'];
-  stayFields.forEach(id => {
-    const el = document.getElementById(id);
-    el.style.transition = "background 0.3s";
-    el.style.background = "#FBDE81"; // 變成次要黃色
-    setTimeout(() => {
-      el.style.background = "#FAFAFA"; // 變回原色
-    }, 300);
-  });
-}
+  // ── 進貨：清空表單 ──
+  function clearPurchaseForm() {
+    document.getElementById('pName').value   = "";
+    document.getElementById('pQty').value    = "";
+    document.getElementById('pImgCamera').value = "";
+    document.getElementById('pImgFile').value   = "";
+    currentWebpBase64 = "";
+    document.getElementById('imgStatus').innerHTML = '<i class="fa-solid fa-circle-question"></i> 尚未拍照';
+    
+    const stayFields = ['pCategory', 'pExpiry'];
+    stayFields.forEach(id => {
+      const el = document.getElementById(id);
+      el.style.transition = "background 0.3s";
+      el.style.background = "#FBDE81";
+      setTimeout(() => { el.style.background = "#FAFAFA"; }, 300);
+    });
+  }
+
+  // ── 確認入庫 ──
   async function submitPurchase() {
     const btn = document.getElementById('btnP');
     const payload = {
-      action: "purchase", 
-      date: document.getElementById('pDate').value, 
-      category: document.getElementById('pCategory').value,
-      name: document.getElementById('pName').value, 
-      amount: document.getElementById('pQty').value, 
-      expiry: document.getElementById('pExpiry').value, 
+      action:    "purchase", 
+      date:      document.getElementById('pDate').value, 
+      category:  document.getElementById('pCategory').value,
+      name:      document.getElementById('pName').value, 
+      amount:    document.getElementById('pQty').value, 
+      expiry:    document.getElementById('pExpiry').value, 
       imageBlob: currentWebpBase64
     };
     
-    if(!payload.amount || !payload.expiry) return showToast("請填寫數量與效期");
+    if (!payload.amount || !payload.expiry) return showToast("請填寫數量與效期");
     
     btn.disabled = true;
     document.getElementById('status').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 資料傳送中...';
     
     try {
-      const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
+      const res    = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
       const result = await res.json();
       showToast(result.message);
-      
-      // 成功後執行表單清理
       clearPurchaseForm();
-      
       localCache.batches = {};
       await initAllData(true);
     } catch(e) {
@@ -371,12 +446,7 @@ function clearPurchaseForm() {
     }
   }
 
-  function zoomImg(src) {
-    if(!src || src.includes('placeholder')) return;
-    document.getElementById('lightboxImg').src = src;
-    document.getElementById('lightbox').style.display = 'flex';
-  }
-
+  // ── 圖片處理（相機 & 相簿共用） ──
   function handleImageUpload(input) {
     const file = input.files[0];
     if (!file) return;
@@ -400,29 +470,89 @@ function clearPurchaseForm() {
     reader.readAsDataURL(file);
   }
 
+  // ── 庫存清單 ──
+  function renderInventory() {
+    const listDiv = document.getElementById('inventoryList');
+    const now   = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+
+    listDiv.innerHTML = localCache.inventory.map(item => {
+      // 取最近效期那批（batches 已按效期排序，第 0 筆就是最近）
+      const batchArr = localCache.batches[item.category] || [];
+      const batchData = batchArr[0] || null;
+      const imgUrl = batchData ? (batchData.imgId || 'https://via.placeholder.com/100?text=No+Img') : 'https://via.placeholder.com/100?text=No+Img';
+      
+      let expiryStr   = '尚未記錄';
+      let expiryStyle = 'color:#666'; 
+
+      if (batchData && batchData.expiry) {
+        const rawExpiry = batchData.expiry.substring(0, 10); 
+        expiryStr = rawExpiry;
+        const parts   = rawExpiry.split(/[-/]/);
+        const expDate = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0); 
+        const diffDays = Math.ceil((expDate - today) / 86400000);
+
+        if (diffDays < 0)        { expiryStr += " (已過期)";           expiryStyle = "color:#D9534F; font-weight:bold;"; }
+        else if (diffDays <= 30) { expiryStr += ` (剩 ${diffDays} 天)`; expiryStyle = "color:#FF4D4D; font-weight:bold;"; }
+        else if (diffDays <= 90) { expiryStr += ` (剩 ${diffDays} 天)`; expiryStyle = "color:#F0AD4E; font-weight:bold;"; }
+      }
+      
+      return `
+        <div class="card">
+          <img class="img-preview" src="${imgUrl}" onclick="zoomImg(this.src)" referrerpolicy="no-referrer">
+          <div style="flex:1">
+            <div style="font-weight:bold">${item.category}</div>
+            <div style="font-size:12px; color:#999">最近效期：<span style="${expiryStyle}">${expiryStr}</span></div>
+            <div style="font-size:12px; color:#999">目前存量：<b style="color:var(--primary); font-size:16px;">${item.currentStock}</b></div>
+          </div>
+          <div class="stock-tag" style="background:${item.currentStock <= item.safeStock ? 'var(--accent)' : 'var(--secondary)'}">
+            ${item.currentStock <= item.safeStock ? '<i class="fa-solid fa-triangle-exclamation"></i> 補貨中' : '<i class="fa-solid fa-square-check"></i> 充足'}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.innerText = msg;
+    t.className = "show";
+    setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
+  }
+
+  // ── 放大圖片 ──
+  function zoomImg(src) {
+    if (!src || src.includes('placeholder')) return;
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('lightbox').style.display = 'flex';
+  }
+
+  // ── 查歷史紀錄 Modal ──
   async function openModal(type) {
     const modal = document.getElementById('recordModal');
-    const body = document.getElementById('modalBody');
+    const body  = document.getElementById('modalBody');
     modal.style.display = 'flex';
     body.innerHTML = "<div style='text-align:center; padding:20px;'><i class='fa-solid fa-spinner fa-spin'></i> 讀取雲端紀錄中...</div>";
-    document.getElementById('modalTitle').innerHTML = type === 'purchase' ? '<i class="fa-solid fa-box-open"></i> 進貨歷史' : '<i class="fa-solid fa-receipt"></i> 領用歷史';
+    document.getElementById('modalTitle').innerHTML = type === 'purchase'
+      ? '<i class="fa-solid fa-box-open"></i> 進貨歷史'
+      : '<i class="fa-solid fa-receipt"></i> 領用歷史';
     
     try {
-      const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: type === 'purchase' ? 'getPurchaseHistory' : 'getUsageHistory' }) });
+      const res  = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: type === 'purchase' ? 'getPurchaseHistory' : 'getUsageHistory' }) });
       const json = await res.json();
       
       body.innerHTML = json.data.map(d => {
-const dateStr = d.date ? d.date.substring(0, 10) : '無';
-const expiryStr = d.expiry ? d.expiry.substring(0, 10) : '無';
-        const detailLabel = type === 'purchase' ? 
-          `<i class="fa-solid fa-hourglass-half"></i> 效期: ${expiryStr}` : 
-          `<i class="fa-regular fa-calendar-check"></i> ${dateStr}`;
+        const dateStr   = d.date   ? d.date.substring(0, 10)   : '無';
+        const expiryStr = d.expiry ? d.expiry.substring(0, 10) : '無';
+        const detailLabel = type === 'purchase' 
+          ? `<i class="fa-solid fa-hourglass-half"></i> 效期: ${expiryStr}` 
+          : `<i class="fa-regular fa-calendar-check"></i> ${dateStr}`;
 
         return `
         <div class="record-item">
           <img class="img-preview" src="${d.imgId || 'https://via.placeholder.com/100?text=No+Img'}" onclick="zoomImg(this.src)" referrerpolicy="no-referrer" style="width:55px; height:55px; flex-shrink:0;">
           <div style="flex:1; font-size:14px; line-height:1.4;">
-            <div style="font-weight:bold; color:var(--text);">${d.category} ${d.name || ''}</div>
+            <div style="font-weight:bold; color:var(--text);">${d.category}${d.name ? ' · ' + d.name : ''}</div>
             <div style="color:#888; font-size:12px; margin-top:2px;">
               ${detailLabel} | 數量: <span style="color:var(--primary); font-weight:bold;">${d.qty}</span>
             </div>
