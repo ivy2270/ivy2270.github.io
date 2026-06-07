@@ -51,6 +51,9 @@ createApp({
             payments: [],
             selectedMain: '',
             chartInstance: null,
+            chartDrillCategory: null, // 圓餅圖點擊篩選的大分類
+            selectedPayments: [], // 統計頁付款方式複選
+            showPaymentFilter: false, // 付款方式篩選展開開關
             
             // 表單內容
             form: { 
@@ -109,10 +112,22 @@ createApp({
                     ...log,
                     displayDate: this.formatToDisplayDate(log.日期),
                     imageUrl: log.圖片ID ? `https://drive.google.com/thumbnail?id=${log.圖片ID}&sz=s1000` : null
-                })).reverse(); // 最新日期在最前
+                })).sort((a, b) => new Date(b.日期) - new Date(a.日期)); // 日期倒序
         },
         totalExpense() { 
             return this.processedLogs.reduce((sum, i) => sum + Number(i.金額 || 0), 0); 
+        },
+        // 統計頁付款方式小計
+        paymentSummary() {
+            if (this.selectedPayments.length === 0) return null;
+            const total = this.processedLogs
+                .filter(log => this.selectedPayments.includes(log.付款方式))
+                .reduce((sum, i) => sum + Number(i.金額 || 0), 0);
+            return total;
+        },
+        paymentFilteredLogs() {
+            if (this.selectedPayments.length === 0) return [];
+            return this.processedLogs.filter(log => this.selectedPayments.includes(log.付款方式));
         },
         zoomStyle() {
             return { 
@@ -251,6 +266,7 @@ createApp({
             const ctx = document.getElementById('myChart');
             if (!ctx) return; 
             if (this.chartInstance) this.chartInstance.destroy();
+            this.chartDrillCategory = null;
             const stats = {};
             this.processedLogs.forEach(log => {
                 const m = log.大分類 || '未分類';
@@ -258,6 +274,7 @@ createApp({
             });
             const labels = Object.keys(stats);
             if (labels.length === 0) return;
+            const self = this;
             this.chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: { 
@@ -268,8 +285,25 @@ createApp({
                         borderWidth: 2, borderColor: '#ffffff' 
                     }] 
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true } } }, cutout: '65%' }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true } } }, 
+                    cutout: '65%',
+                    onClick(event, elements) {
+                        if (elements.length > 0) {
+                            const clickedLabel = labels[elements[0].index];
+                            self.chartDrillCategory = self.chartDrillCategory === clickedLabel ? null : clickedLabel;
+                        } else {
+                            self.chartDrillCategory = null;
+                        }
+                    }
+                }
             });
+        },
+        drillLogs() {
+            if (!this.chartDrillCategory) return [];
+            return this.processedLogs.filter(log => (log.大分類 || '未分類') === this.chartDrillCategory);
         },
 
         // --- 設定管理 ---
