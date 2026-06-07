@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v4_cache';
+const CACHE_NAME = 'v5_cache';
 const urlsToCache = [
   './',
   './index.html', // 換成你的 html 檔名
