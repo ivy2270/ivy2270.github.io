@@ -261,7 +261,7 @@
             </div>
         </div>
 
-        <div class="add-btn" @click="openAddModal">
+        <div class="add-btn" v-if="activeTab === 'list'" @click="openAddModal">
             <i class="fa-solid fa-plus"></i>
         </div>
 
