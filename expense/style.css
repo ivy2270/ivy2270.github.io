@@ -94,8 +94,22 @@ h2 {
     object-fit: cover;
 }
 
+/* 修正後的 placeholder 樣式 */
 .thumb-placeholder {
-    font-size: 24px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px; /* 內縮邊距，讓 SVG 袋子在 50x50 的格子裡不會太滿、更好看 */
+    box-sizing: border-box;
+}
+
+/* 讓裡面的 SVG 圖片自動適應大小且不變形 */
+.thumb-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 /* 標籤樣式 */
