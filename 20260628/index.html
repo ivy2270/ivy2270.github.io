@@ -251,6 +251,15 @@
             opacity: 0.4;
             pointer-events: none;
         }
+
+        /* 已取票項目：整列變暗 */
+        .checked-row {
+            opacity: 0.4;
+        }
+
+        .checked-row:hover {
+            opacity: 0.7;
+        }
         
         .toast-msg {
             position: fixed;
@@ -333,10 +342,18 @@
                         <div style="color: #a4b0be; font-size: 13px;">總登記張數</div>
                         <div class="stat-num" id="totalTickets">0 張</div>
                     </div>
+                    <div class="stat-card">
+                        <div style="color: #a4b0be; font-size: 13px;">已取票</div>
+                        <div class="stat-num" id="checkedTickets">0 張</div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="color: #a4b0be; font-size: 13px;">未取票</div>
+                        <div class="stat-num" id="uncheckedTickets">0 張</div>
+                    </div>
                 </div>
                 <div id="senderSummaryGrid" class="stat-grid" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px;"></div>
 
-                <h3 style="color:#d4af37; margin: 15px 0 8px 0; font-size:14px;">✦ 登記名單（可左右滑動）</h3>
+                <h3 style="color:#d4af37; margin: 15px 0 8px 0; font-size:14px;">✦ 登記名細（可左右滑動）</h3>
                 <div class="table-responsive">
                     <table id="detailsTable">
                         <thead>
@@ -434,12 +451,18 @@
                 document.getElementById('adminLoading').style.display = 'none';
                 document.getElementById('adminContent').style.display = 'block';
                 document.getElementById('totalTickets').innerText = data.totalTickets + ' 張';
+                document.getElementById('checkedTickets').innerText = data.checkedTickets + ' 張';
+                document.getElementById('uncheckedTickets').innerText = data.uncheckedTickets + ' 張';
 
                 const grid = document.getElementById('senderSummaryGrid');
                 grid.innerHTML = '';
                 ['楊泓霖', '陳怡姍', '毛明雯', '劉欣鑫', '詹雨璇'].forEach(s => {
-                    const c = data.senderSummary[s] || 0;
-                    grid.innerHTML += `<div class="stat-card"><div style="color:#a4b0be; font-size:11px;">${s}</div><div class="stat-num" style="font-size:14px;">${c} 張</div></div>`;
+                    const summary = data.senderSummary[s] || { total: 0, checked: 0, unchecked: 0 };
+                    grid.innerHTML += `<div class="stat-card">
+                        <div style="color:#a4b0be; font-size:11px;">${s}</div>
+                        <div class="stat-num" style="font-size:14px;">${summary.total} 張</div>
+                        <div style="font-size:10px; color:#a4b0be; margin-top:4px;">已取 ${summary.checked} / 未取 ${summary.unchecked}</div>
+                    </div>`;
                 });
 
                 const tbody = document.querySelector('#detailsTable tbody');
@@ -459,6 +482,9 @@
                         }
 
                         const tr = document.createElement('tr');
+                        if (row.isChecked) {
+                            tr.classList.add('checked-row');
+                        }
                         tr.innerHTML = `
                             <td class="check-td"><input type="checkbox" class="chk-box" ${row.isChecked ? 'checked' : ''} onchange="toggleCheck(this, '${encodeURIComponent(row.timestamp)}', '${encodeURIComponent(row.picker)}', '${encodeURIComponent(row.sender)}')"></td>
                             <td style="font-weight:bold;">${row.picker}</td>
