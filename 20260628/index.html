@@ -261,6 +261,30 @@
             opacity: 0.7;
         }
         
+        /* 寄票人篩選：選取中的小框高亮 */
+        .stat-card.sender-active {
+            border-color: #d4af37;
+            background: rgba(199, 160, 84, 0.18);
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+        }
+
+        .stat-card[data-sender] {
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card[data-sender]:hover {
+            border-color: rgba(199, 160, 84, 0.7);
+        }
+
+        /* 篩選中提示文字 */
+        #filterNotice {
+            display: none;
+            font-size: 12px;
+            color: #c9a054;
+            margin: 6px 0 0 2px;
+        }
+
         .toast-msg {
             position: fixed;
             bottom: 20px;
@@ -352,6 +376,7 @@
                     </div>
                 </div>
                 <div id="senderSummaryGrid" class="stat-grid" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px;"></div>
+                <div id="filterNotice">▲ 篩選中，點擊同一框取消</div>
 
                 <h3 style="color:#d4af37; margin: 15px 0 8px 0; font-size:14px;">✦ 登記明細（可左右滑動）</h3>
                 <div class="table-responsive">
@@ -375,9 +400,10 @@
     <div id="toast" class="toast-msg">狀態已同步雲端</div>
 
     <script>
-        // ⚠️ 請填入您的 GAS 部署 URL ⚠️
         const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzdp7ZLHN8m_vEZB5pgwt0xsLPAX0ulrPbFIEsJlATmDjSCZDNhPfs0ut2FJ9EK8h2Z/exec";
-        let currentAdminPw = ""; 
+        let currentAdminPw = "";
+        let allDetails = [];        // 全域保留所有明細
+        let activeFilter = null;    // 目前篩選的寄票人，null = 全部
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -458,43 +484,34 @@
                 grid.innerHTML = '';
                 ['楊泓霖', '陳怡姍', '毛明雯', '劉欣鑫', '詹雨璇'].forEach(s => {
                     const summary = data.senderSummary[s] || { total: 0, checked: 0, unchecked: 0 };
-                    grid.innerHTML += `<div class="stat-card">
+                    const card = document.createElement('div');
+                    card.className = 'stat-card';
+                    card.dataset.sender = s;
+                    card.innerHTML = `
                         <div style="color:#a4b0be; font-size:11px;">${s}</div>
                         <div class="stat-num" style="font-size:14px;">${summary.total} 張</div>
                         <div style="font-size:10px; color:#a4b0be; margin-top:4px;">已取 ${summary.checked} / 未取 ${summary.unchecked}</div>
-                    </div>`;
+                    `;
+                    card.addEventListener('click', function() {
+                        if (activeFilter === s) {
+                            // 再點一次 → 取消篩選
+                            activeFilter = null;
+                            document.querySelectorAll('#senderSummaryGrid .stat-card').forEach(c => c.classList.remove('sender-active'));
+                            document.getElementById('filterNotice').style.display = 'none';
+                        } else {
+                            // 選取這個寄票人
+                            activeFilter = s;
+                            document.querySelectorAll('#senderSummaryGrid .stat-card').forEach(c => c.classList.remove('sender-active'));
+                            card.classList.add('sender-active');
+                            document.getElementById('filterNotice').style.display = 'block';
+                        }
+                        renderTable(activeFilter);
+                    });
+                    grid.appendChild(card);
                 });
 
-                const tbody = document.querySelector('#detailsTable tbody');
-                tbody.innerHTML = '';
-                if(data.details.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#a4b0be;">目前尚無登記資料</td></tr>';
-                } else {
-                    data.details.forEach(row => {
-                        // 🚀 亮點 2：精簡時間，只保留「MM/DD」格式
-                        let shortDate = row.timestamp; 
-                        if (row.timestamp && row.timestamp.includes(' ')) {
-                            const datePart = row.timestamp.split(' ')[0]; // 拿 2026/05/30
-                            const parts = datePart.split('/');
-                            if (parts.length === 3) {
-                                shortDate = parts[1] + '/' + parts[2]; // 變成 05/30
-                            }
-                        }
-
-                        const tr = document.createElement('tr');
-                        if (row.isChecked) {
-                            tr.classList.add('checked-row');
-                        }
-                        tr.innerHTML = `
-                            <td class="check-td"><input type="checkbox" class="chk-box" ${row.isChecked ? 'checked' : ''} onchange="toggleCheck(this, '${encodeURIComponent(row.timestamp)}', '${encodeURIComponent(row.picker)}', '${encodeURIComponent(row.sender)}')"></td>
-                            <td style="font-weight:bold;">${row.picker}</td>
-                            <td class="col-count" style="color:#d4af37; font-weight:bold;">${row.count}</td>
-                            <td>${row.sender}</td>
-                            <td class="col-time" style="font-size:12px; color:#a4b0be;">${shortDate}</td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
-                }
+                allDetails = data.details;
+                renderTable(null);
             };
 
             const script = document.createElement('script');
@@ -502,17 +519,56 @@
             document.body.appendChild(script);
         }
 
+        function renderTable(filterSender) {
+            const tbody = document.querySelector('#detailsTable tbody');
+            tbody.innerHTML = '';
+            const rows = filterSender ? allDetails.filter(r => r.sender === filterSender) : allDetails;
+            if (rows.length === 0) {
+                const msg = filterSender ? `${filterSender} 目前尚無登記資料` : '目前尚無登記資料';
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#a4b0be;">${msg}</td></tr>`;
+                return;
+            }
+            rows.forEach(row => {
+                let shortDate = row.timestamp;
+                if (row.timestamp && row.timestamp.includes(' ')) {
+                    const datePart = row.timestamp.split(' ')[0];
+                    const parts = datePart.split('/');
+                    if (parts.length === 3) {
+                        shortDate = parts[1] + '/' + parts[2];
+                    }
+                }
+                const tr = document.createElement('tr');
+                if (row.isChecked) tr.classList.add('checked-row');
+                tr.innerHTML = `
+                    <td class="check-td"><input type="checkbox" class="chk-box" ${row.isChecked ? 'checked' : ''} onchange="toggleCheck(this, '${encodeURIComponent(row.timestamp)}', '${encodeURIComponent(row.picker)}', '${encodeURIComponent(row.sender)}')"></td>
+                    <td style="font-weight:bold;">${row.picker}</td>
+                    <td class="col-count" style="color:#d4af37; font-weight:bold;">${row.count}</td>
+                    <td>${row.sender}</td>
+                    <td class="col-time" style="font-size:12px; color:#a4b0be;">${shortDate}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         function toggleCheck(checkbox, encTime, encPicker, encSender) {
             const tr = checkbox.parentElement.parentElement;
-            tr.classList.add('updating-row'); 
+            const newChecked = checkbox.checked;
+            tr.classList.add('updating-row');
+
+            // 同步更新全域 allDetails，讓篩選切換後狀態正確
+            const time = decodeURIComponent(encTime);
+            const picker = decodeURIComponent(encPicker);
+            const sender = decodeURIComponent(encSender);
+            const found = allDetails.find(r => r.timestamp === time && r.picker === picker && r.sender === sender);
+            if (found) found.isChecked = newChecked;
 
             const searchParams = new URLSearchParams();
             searchParams.append('action', 'updateCheckStatus');
             searchParams.append('pw', currentAdminPw);
-            searchParams.append('timestamp', decodeURIComponent(encTime));
-            searchParams.append('picker', decodeURIComponent(encPicker));
-            searchParams.append('sender', decodeURIComponent(encSender));
-            searchParams.append('isChecked', checkbox.checked);
+            searchParams.append('timestamp', time);
+            searchParams.append('picker', picker);
+            searchParams.append('sender', sender);
+            searchParams.append('isChecked', newChecked);
 
             fetch(GAS_WEB_APP_URL, { 
                 method: 'POST', 
@@ -521,13 +577,16 @@
             })
             .then(() => {
                 tr.classList.remove('updating-row');
+                if (newChecked) tr.classList.add('checked-row');
+                else tr.classList.remove('checked-row');
                 showToast(); 
             })
             .catch(err => {
                 console.error(err);
                 tr.classList.remove('updating-row');
                 alert('連線伺服器失敗。');
-                checkbox.checked = !checkbox.checked;
+                checkbox.checked = !newChecked;
+                if (found) found.isChecked = !newChecked;
             });
         }
 
