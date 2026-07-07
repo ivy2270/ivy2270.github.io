@@ -3,62 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LINE 會員綁定測試</title>
+    <title>LINE 唯一入口登入測試</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
 <body>
-    <h1>LINE 會員綁定測試頁面</h1>
-    
-    <div id="loading">LIFF 初始化中...</div>
-    
-    <div id="profile-zone" style="display: none;">
-        <p>你的 LINE 狀態：<span style="color: green;">已登入</span></p>
-        <p>LINE User ID: <strong id="line-id"></strong></p>
-        <p>LINE 暱稱: <span id="line-name"></span></p>
-        <img id="line-img" src="" alt="大頭貼" style="width: 100px; border-radius: 50%;"><br><br>
-        
-        <button id="btn-external">測試：跳出外部瀏覽器</button>
+    <h1>系統狀態</h1>
+    <div id="status-message">初始化中...</div>
+
+    <div id="user-info" style="display: none;">
+        <h3>歡迎回來！</h3>
+        <p>你的身份已成功認證。</p>
+        <div id="api-data"></div>
+        <br>
+        <button id="btn-open-external" style="display: none; padding: 10px 20px; font-size: 16px;">
+            👉 點我安全跳轉到外部瀏覽器
+        </button>
     </div>
 
     <script>
-        // 填入你在 LINE Developers 申請到的 LIFF ID
-        const MY_LIFF_ID = '2010635320-qt6dNkz3'; 
+        // --- 設定區 ---
+        const MY_LIFF_ID = '填入你的_LIFF_ID'; 
+        const SUPABASE_URL = '填入你的_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = '填入你的_SUPABASE_ANON_KEY';
+        const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/line-auth`;
 
-        async function initLineLiff() {
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let generatedTicket = '';
+
+        async function startApp() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ticket = urlParams.get('ticket');
+
+            // 狀況一：網址帶有 ticket -> 代表這是在外部瀏覽器
+            if (ticket) {
+                document.getElementById('status-message').innerText = '正在從 LINE 轉移登入狀態...';
+                await exchangeTicket(ticket);
+                return;
+            }
+
+            // 狀況二：沒有 ticket -> 走正常 LIFF 流程（LINE 內部）
             try {
                 await liff.init({ liffId: MY_LIFF_ID });
-                document.getElementById('loading').style.display = 'none';
-
                 if (!liff.isLoggedIn()) {
-                    // 如果沒登入，引導用戶登入
                     liff.login();
-                } else {
-                    // 已登入，取得用戶基本資料
-                    document.getElementById('profile-zone').style.display = 'block';
-                    const profile = await liff.getProfile();
-                    
-                    // 顯示在畫面上
-                    document.getElementById('line-id').innerText = profile.userId;
-                    document.getElementById('line-name').innerText = profile.displayName;
-                    document.getElementById('line-img').src = profile.pictureUrl;
-
-                    // 綁定「跳出外部瀏覽器」按鈕事件
-                    document.getElementById('btn-external').addEventListener('click', () => {
-                        // 這裡可以先連到你之後想測試的外部網址
-                        liff.openWindow({
-                            url: 'https://google.com', 
-                            external: true // true 代表強制用手機預設瀏覽器打開
-                        });
-                    });
+                    return;
                 }
-            } catch (error) {
-                console.error('LIFF 初始化失敗', error);
-                document.getElementById('loading').innerText = '初始化失敗：' + error.message;
+
+                document.getElementById('status-message').innerText = 'LINE 已連線，正在同步會員資料...';
+                const profile = await liff.getProfile();
+                const idToken = liff.getIDToken();
+
+                // 呼叫 Edge Function 進行無感註冊/登入並取得轉跳 Ticket
+                const response = await fetch(EDGE_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                    body: JSON.stringify({ action: 'liff_login', idToken, lineProfile: profile })
+                });
+                
+                const result = await response.json();
+                if (result.ticket) {
+                    generatedTicket = result.ticket;
+                    document.getElementById('status-message').innerText = 'LINE 內部登入成功！';
+                    document.getElementById('user-info').style.display = 'block';
+                    document.getElementById('api-data').innerText = `LINE 名稱: ${profile.displayName}`;
+                    
+                    // 顯示跳轉按鈕
+                    const btn = document.getElementById('btn-open-external');
+                    btn.style.display = 'block';
+                    btn.onclick = () => {
+                        // 取得當前的 GitHub Pages 網址，並帶上 ticket
+                        const currentUrl = window.location.href.split('?')[0];
+                        const targetUrl = `${currentUrl}?ticket=${generatedTicket}`;
+                        liff.openWindow({ url: targetUrl, external: true });
+                    };
+                } else {
+                    throw new Error(result.error || '無法取得 Ticket');
+                }
+
+            } catch (err) {
+                document.getElementById('status-message').innerText = '發生錯誤: ' + err.message;
             }
         }
 
-        // 執行初始化
-        initLineLiff();
+        // 外部瀏覽器：用 Ticket 換取正式 Session
+        async function exchangeTicket(ticket) {
+            try {
+                const response = await fetch(EDGE_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                    body: JSON.stringify({ action: 'ticket_exchange', ticket })
+                });
+
+                const result = await response.json();
+                if (result.session) {
+                    // 將 Edge Function 幫我們換到的 Session 塞入外部瀏覽器的 Supabase SDK
+                    await supabase.auth.setSession({
+                        access_token: result.session.access_token,
+                        refresh_token: result.session.refresh_token
+                    });
+
+                    // 移除網址上的 ticket 參數，保持優雅
+                    window.history.replaceState({}, document.title, window.location.pathname);
+
+                    document.getElementById('status-message').innerText = '外部瀏覽器已同步自動登入！';
+                    document.getElementById('user-info').style.display = 'block';
+                    
+                    // 測試抓取目前登入的 Supabase 用戶資訊
+                    const { data: { user } } = await supabase.auth.getUser();
+                    document.getElementById('api-data').innerText = `Supabase 內建會員 ID: ${user.id}\nEmail: ${user.email}`;
+                } else {
+                    document.getElementById('status-message').innerText = '登入失敗：' + (result.error || 'Ticket 無效');
+                }
+            } catch (err) {
+                document.getElementById('status-message').innerText = '通訊錯誤: ' + err.message;
+            }
+        }
+
+        startApp();
     </script>
 </body>
 </html>
