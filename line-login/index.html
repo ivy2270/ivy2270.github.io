@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINE 會員綁定測試</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+    <h1>LINE 會員綁定測試頁面</h1>
+    
+    <div id="loading">LIFF 初始化中...</div>
+    
+    <div id="profile-zone" style="display: none;">
+        <p>你的 LINE 狀態：<span style="color: green;">已登入</span></p>
+        <p>LINE User ID: <strong id="line-id"></strong></p>
+        <p>LINE 暱稱: <span id="line-name"></span></p>
+        <img id="line-img" src="" alt="大頭貼" style="width: 100px; border-radius: 50%;"><br><br>
+        
+        <button id="btn-external">測試：跳出外部瀏覽器</button>
+    </div>
+
+    <script>
+        // 填入你在 LINE Developers 申請到的 LIFF ID
+        const MY_LIFF_ID = '填入你的_LIFF_ID'; 
+
+        async function initLineLiff() {
+            try {
+                await liff.init({ liffId: MY_LIFF_ID });
+                document.getElementById('loading').style.display = 'none';
+
+                if (!liff.isLoggedIn()) {
+                    // 如果沒登入，引導用戶登入
+                    liff.login();
+                } else {
+                    // 已登入，取得用戶基本資料
+                    document.getElementById('profile-zone').style.display = 'block';
+                    const profile = await liff.getProfile();
+                    
+                    // 顯示在畫面上
+                    document.getElementById('line-id').innerText = profile.userId;
+                    document.getElementById('line-name').innerText = profile.displayName;
+                    document.getElementById('line-img').src = profile.pictureUrl;
+
+                    // 綁定「跳出外部瀏覽器」按鈕事件
+                    document.getElementById('btn-external').addEventListener('click', () => {
+                        // 這裡可以先連到你之後想測試的外部網址
+                        liff.openWindow({
+                            url: 'https://google.com', 
+                            external: true // true 代表強制用手機預設瀏覽器打開
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('LIFF 初始化失敗', error);
+                document.getElementById('loading').innerText = '初始化失敗：' + error.message;
+            }
+        }
+
+        // 執行初始化
+        initLineLiff();
+    </script>
+</body>
+</html>
