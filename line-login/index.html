@@ -28,7 +28,8 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjdGhobm1iYmtqanp4a3R5enZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NDEyMjUsImV4cCI6MjA5OTAxNzIyNX0.BR8Y3RSb2155hiu54vBeL9xw6Qw_-g1SvPuYnJM0eQY';
         const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/line-auth`;
 
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // 把變數名稱改成 supabaseClient，避免跟 SDK 內建的名稱撞車
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let generatedTicket = '';
 
         async function startApp() {
@@ -98,7 +99,7 @@
                 const result = await response.json();
                 if (result.session) {
                     // 將 Edge Function 幫我們換到的 Session 塞入外部瀏覽器的 Supabase SDK
-                    await supabase.auth.setSession({
+                    await supabaseClient.auth.setSession({
                         access_token: result.session.access_token,
                         refresh_token: result.session.refresh_token
                     });
@@ -110,7 +111,7 @@
                     document.getElementById('user-info').style.display = 'block';
                     
                     // 測試抓取目前登入的 Supabase 用戶資訊
-                    const { data: { user } } = await supabase.auth.getUser();
+                    const { data: { user } } = await supabaseClient.auth.getUser();
                     document.getElementById('api-data').innerText = `Supabase 內建會員 ID: ${user.id}\nEmail: ${user.email}`;
                 } else {
                     document.getElementById('status-message').innerText = '登入失敗：' + (result.error || 'Ticket 無效');
