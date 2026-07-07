@@ -8,15 +8,23 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
 <body>
-    <h1>系統狀態</h1>
-    <div id="status-message">初始化中...</div>
+    <div id="status-message" style="background: #f0f0f0; padding: 10px; font-weight: bold;">初始化中...</div>
 
-    <div id="user-info" style="display: none;">
-        <h3>歡迎回來！</h3>
-        <p>你的身份已成功認證。</p>
-        <div id="api-data"></div>
+    <div id="member-dashboard" style="display: none; padding: 20px;">
+        <h2>🌟 歡迎來到會員專區</h2>
+        <div style="background: #e6f7ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p><strong>您的專屬權限功能：</strong></p>
+            <ul>
+                <li>🎁 每日簽到領取紅利</li>
+                <li>專屬優惠券：<span style="color: red; font-weight: bold;">LINE_WELCOME_99</span></li>
+                <li>查看您的消費歷史紀錄</li>
+            </ul>
+        </div>
+
+        <div id="api-data" style="font-family: monospace; background: #fafafa; padding: 10px; border: 1px solid #ddd;"></div>
         <br>
-        <button id="btn-open-external" style="display: none; padding: 10px 20px; font-size: 16px;">
+        
+        <button id="btn-open-external" style="display: none; padding: 12px 24px; font-size: 16px; background-color: #06C755; color: white; border: none; border-radius: 5px; cursor: pointer;">
             👉 點我安全跳轉到外部瀏覽器
         </button>
     </div>
@@ -65,9 +73,10 @@
                 const result = await response.json();
                 if (result.ticket) {
                     generatedTicket = result.ticket;
-                    document.getElementById('status-message').innerText = 'LINE 內部登入成功！';
-                    document.getElementById('user-info').style.display = 'block';
-                    document.getElementById('api-data').innerText = `LINE 名稱: ${profile.displayName}`;
+                    // 當驗證成功時，隱藏狀態，秀出 dashboard
+document.getElementById('status-message').style.display = 'none';
+document.getElementById('member-dashboard').style.display = 'block';
+document.getElementById('api-data').innerText = `目前登入帳號：${user.email}`;
                     
                     // 顯示跳轉按鈕
                     const btn = document.getElementById('btn-open-external');
