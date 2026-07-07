@@ -7,36 +7,42 @@
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
-<body>
-    <div id="status-message" style="background: #f0f0f0; padding: 10px; font-weight: bold;">初始化中...</div>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
 
-    <div id="member-dashboard" style="display: none; padding: 20px;">
-        <h2>🌟 歡迎來到會員專區</h2>
-        <div style="background: #e6f7ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <p><strong>您的專屬權限功能：</strong></p>
-            <ul>
-                <li>🎁 每日簽到領取紅利</li>
-                <li>專屬優惠券：<span style="color: red; font-weight: bold;">LINE_WELCOME_99</span></li>
-                <li>查看您的消費歷史紀錄</li>
+    <div id="status-message" style="background: #f0f0f0; padding: 15px; font-weight: bold; text-align: center; color: #333; border-bottom: 1px solid #ddd;">
+        初始化中...
+    </div>
+
+    <div id="member-dashboard" style="display: none; padding: 20px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333; text-align: center;">🌟 歡迎來到會員專區</h2>
+        
+        <div style="background: #e6f7ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #bae7ff;">
+            <p style="margin-top: 0; color: #0050b3;"><strong>您的專屬權限功能：</strong></p>
+            <ul style="padding-left: 20px; color: #262626; line-height: 1.6;">
+                <li>🎁 每日簽到領取紅利點數</li>
+                <li>專屬優惠券：<span style="color: #f5222d; font-weight: bold;">LINE_WELCOME_99</span></li>
+                <li>查看您的消費歷史與綁定紀錄</li>
             </ul>
         </div>
 
-        <div id="api-data" style="font-family: monospace; background: #fafafa; padding: 10px; border: 1px solid #ddd;"></div>
-        <br>
+        <div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #d9d9d9; margin-bottom: 20px;">
+            <p style="margin-top: 0; font-weight: bold; color: #595959;">👤 帳號連線資訊：</p>
+            <div id="api-data" style="font-family: monospace; white-space: pre-wrap; background: #fafafa; padding: 12px; border-radius: 4px; border: 1px solid #f0f0f0; word-break: break-all; color: #434343;"></div>
+        </div>
         
-        <button id="btn-open-external" style="display: none; padding: 12px 24px; font-size: 16px; background-color: #06C755; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        <button id="btn-open-external" style="display: none; width: 100%; padding: 14px; font-size: 16px; font-weight: bold; background-color: #06C755; color: white; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(6, 199, 85, 0.2); transition: background 0.3s;">
             👉 點我安全跳轉到外部瀏覽器
         </button>
     </div>
 
     <script>
-        // --- 設定區 ---
-        const MY_LIFF_ID = '2010635320-qt6dNkz3'; 
-        const SUPABASE_URL = 'https://zcthhnmbbkjjzxktyzvk.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjdGhobm1iYmtqanp4a3R5enZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NDEyMjUsImV4cCI6MjA5OTAxNzIyNX0.BR8Y3RSb2155hiu54vBeL9xw6Qw_-g1SvPuYnJM0eQY';
-        const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/line-auth`;
+        // ==================== [ 設定區 ] ====================
+        const MY_LIFF_ID = '2010635320-qt6dNkz3';  // 填入你的 LIFF ID
+        const SUPABASE_URL = 'https://zcthhnmbbkjjzxktyzvk.supabase.co'; // 填入你的 Supabase URL
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjdGhobm1iYmtqanp4a3R5enZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NDEyMjUsImV4cCI6MjA5OTAxNzIyNX0.BR8Y3RSb2155hiu54vBeL9xw6Qw_-g1SvPuYnJM0eQY'; // 填入你的 Anon Key
+        // ====================================================
 
-        // 把變數名稱改成 supabaseClient，避免跟 SDK 內建的名稱撞車
+        const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/line-auth`;
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let generatedTicket = '';
 
@@ -44,16 +50,18 @@
             const urlParams = new URLSearchParams(window.location.search);
             const ticket = urlParams.get('ticket');
 
-            // 狀況一：網址帶有 ticket -> 代表這是在外部瀏覽器
+            // 狀況一：網址帶有 ticket -> 代表這是在外部瀏覽器（Chrome / Safari）
             if (ticket) {
                 document.getElementById('status-message').innerText = '正在從 LINE 轉移登入狀態...';
                 await exchangeTicket(ticket);
                 return;
             }
 
-            // 狀況二：沒有 ticket -> 走正常 LIFF 流程（LINE 內部）
+            // 狀況二：沒有 ticket -> 走正常 LIFF 流程（手機 LINE 官方帳號內部）
             try {
+                document.getElementById('status-message').innerText = '正在初始化 LINE 系統...';
                 await liff.init({ liffId: MY_LIFF_ID });
+                
                 if (!liff.isLoggedIn()) {
                     liff.login();
                     return;
@@ -63,73 +71,95 @@
                 const profile = await liff.getProfile();
                 const idToken = liff.getIDToken();
 
-                // 呼叫 Edge Function 進行無感註冊/登入並取得轉跳 Ticket
+                // 呼叫後端 Edge Function 進行自動註冊/老會員判定，並取得 Ticket
                 const response = await fetch(EDGE_FUNCTION_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
+                    },
                     body: JSON.stringify({ action: 'liff_login', idToken, lineProfile: profile })
                 });
                 
                 const result = await response.json();
+                
                 if (result.ticket) {
                     generatedTicket = result.ticket;
-                    // 當驗證成功時，隱藏狀態，秀出 dashboard
-document.getElementById('status-message').style.display = 'none';
-document.getElementById('member-dashboard').style.display = 'block';
-document.getElementById('api-data').innerText = `目前登入帳號：${user.email}`;
                     
-                    // 顯示跳轉按鈕
+                    // 隱藏頂部狀態，秀出會員專區
+                    document.getElementById('status-message').style.display = 'none';
+                    document.getElementById('member-dashboard').style.display = 'block';
+                    
+                    // 顯示帳號資料 (使用 LINE 資訊安全組合，避開未定義變數錯誤)
+                    const userEmail = `${profile.userId}@line-login.local`;
+                    document.getElementById('api-data').innerText = `環境：LINE 官方帳號 (LIFF)\n名稱：${profile.displayName}\n信箱：${userEmail}`;
+                    
+                    // 順利取得 Ticket，把跳轉按鈕顯示出來並綁定事件
                     const btn = document.getElementById('btn-open-external');
                     btn.style.display = 'block';
                     btn.onclick = () => {
-                        // 取得當前的 GitHub Pages 網址，並帶上 ticket
+                        // 取得不帶參數的乾淨當前網址，並串接 ticket
                         const currentUrl = window.location.href.split('?')[0];
                         const targetUrl = `${currentUrl}?ticket=${generatedTicket}`;
+                        
+                        // 強制喚醒手機預設的外顯瀏覽器 (Android -> Chrome, iOS -> Safari)
                         liff.openWindow({ url: targetUrl, external: true });
                     };
                 } else {
-                    throw new Error(result.error || '無法取得 Ticket');
+                    throw new Error(result.error || '後端回傳未知錯誤');
                 }
 
             } catch (err) {
+                document.getElementById('status-message').style.backgroundColor = '#fff1f0';
+                document.getElementById('status-message').style.color = '#f5222d';
                 document.getElementById('status-message').innerText = '發生錯誤: ' + err.message;
             }
         }
 
-        // 外部瀏覽器：用 Ticket 換取正式 Session
+        // 外部瀏覽器專用：用網址上的 Ticket 換取正式 Supabase Session 登入憑證
         async function exchangeTicket(ticket) {
             try {
                 const response = await fetch(EDGE_FUNCTION_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
+                    },
                     body: JSON.stringify({ action: 'ticket_exchange', ticket })
                 });
 
                 const result = await response.json();
+                
                 if (result.session) {
-                    // 將 Edge Function 幫我們換到的 Session 塞入外部瀏覽器的 Supabase SDK
+                    // 將後端簽發的正式 Session 注入目前瀏覽器的 Supabase SDK
                     await supabaseClient.auth.setSession({
                         access_token: result.session.access_token,
                         refresh_token: result.session.refresh_token
                     });
 
-                    // 移除網址上的 ticket 參數，保持優雅
+                    // 成功登入後，悄悄把網址上的 ?ticket=... 抹除，維持網址乾淨漂亮
                     window.history.replaceState({}, document.title, window.location.pathname);
 
-                    document.getElementById('status-message').innerText = '外部瀏覽器已同步自動登入！';
-                    document.getElementById('user-info').style.display = 'block';
+                    // 隱藏狀態，秀出會員專區
+                    document.getElementById('status-message').style.display = 'none';
+                    document.getElementById('member-dashboard').style.display = 'block';
                     
-                    // 測試抓取目前登入的 Supabase 用戶資訊
+                    // 向 Supabase 撈取正式登入成功的 User 資訊做最終驗證
                     const { data: { user } } = await supabaseClient.auth.getUser();
-                    document.getElementById('api-data').innerText = `Supabase 內建會員 ID: ${user.id}\nEmail: ${user.email}`;
+                    document.getElementById('api-data').innerText = `環境：外部預設瀏覽器\n會員 UUID：${user.id}\n信箱：${user.email}\n狀態：🎉 已同步自動登入成功！`;
                 } else {
-                    document.getElementById('status-message').innerText = '登入失敗：' + (result.error || 'Ticket 無效');
+                    document.getElementById('status-message').style.backgroundColor = '#fff1f0';
+                    document.getElementById('status-message').style.color = '#f5222d';
+                    document.getElementById('status-message').innerText = '登入失敗：' + (result.error || 'Ticket 已失效');
                 }
             } catch (err) {
-                document.getElementById('status-message').innerText = '通訊錯誤: ' + err.message;
+                document.getElementById('status-message').style.backgroundColor = '#fff1f0';
+                document.getElementById('status-message').style.color = '#f5222d';
+                document.getElementById('status-message').innerText = '通訊異常: ' + err.message;
             }
         }
 
+        // 啟動主程式
         startApp();
     </script>
 </body>
