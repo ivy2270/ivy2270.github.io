@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>微時記帳 - 簡約生活小工具</title>
+    <link rel="icon" type="image/svg+xml" href="money-bag-money-svgrepo-com.svg">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <link id="manifest-link" rel="manifest" href="manifest.json">
+    <link rel="preload" href="https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf" as="font" type="font/ttf" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+</head>
+<body>
+    <div id="app" class="container" v-cloak>   
+    
+        <h2 style="text-align: center; color: var(--primary); margin: 20px 0; display: flex; align-items: center; justify-content: center; gap: 8px;">
+  <img src="money-bag01.svg" alt="money bag" style="width: 1.2em; height: 1.2em; vertical-align: middle;">
+  {{ currentTabTitle }}
+</h2>
+
+        <transition name="tab-content-fade" mode="out-in">
+            <div :key="activeTab">
+                <div v-if="activeTab === 'list'">
+                    
+                    <div class="filter-toolbar">
+                        <div class="filter-summary">
+                            <i class="fa-regular fa-calendar-days"></i>
+                            <span>{{ filter.start }} ~ {{ filter.end }}</span>
+                        </div>
+                        <button class="filter-toggle-btn" :class="{active: showFilterPanel}" @click="showFilterPanel = !showFilterPanel">
+                            <i class="fa-solid fa-sliders"></i>
+                        </button>
+                    </div>
+
+                    <transition name="slide-fade">
+                        <div class="filter-panel" v-if="showFilterPanel">
+                            <div class="filter-grid">
+                                <div class="filter-input-group full-width">
+                                    <label>快速選月份</label>
+                                    <input type="month" v-model="selectedMonth" @change="setFilterMonth(selectedMonth)" :list="monthOptions.length ? 'month-options' : null">
+                                    <datalist id="month-options">
+                                        <option v-for="month in monthOptions" :value="month"></option>
+                                    </datalist>
+                                </div>
+                                <div class="filter-input-group">
+                                    <label>開始日期</label>
+                                    <input type="date" v-model="filter.start">
+                                </div>
+                                <div class="filter-input-group">
+                                    <label>結束日期</label>
+                                    <input type="date" v-model="filter.end">
+                                </div>
+                                <div class="filter-input-group">
+                                    <label>分類篩選</label>
+                                    <select v-model="filter.mainCategory">
+                                        <option value="">全部類別</option>
+                                        <option v-for="cat in categoryData" :value="cat.main">{{ cat.main }}</option>
+                                    </select>
+                                </div>
+                                <div class="filter-input-group">
+                                    <label>付款方式</label>
+                                    <select v-model="filter.payment">
+                                        <option value="">全部方式</option>
+                                        <option v-for="p in payments" :value="p">{{ p }}</option>
+                                    </select>
+                                </div>
+                                <div class="filter-input-group full-width">
+                                    <label>關鍵字搜尋</label>
+                                    <input type="text" v-model="filter.keyword" placeholder="搜尋品項或備註...">
+                                </div>
+                            </div>
+                        </div>
+                    </transition>
+
+                    <div class="card log-item" v-for="item in processedLogs" :key="item.id" @click="editLog(item)">
+                        <div style="display: flex; align-items: center;">
+                            <div class="thumb-box">
+                                <img v-if="item.imageUrl" :src="item.imageUrl" class="thumb" @click.stop="openLightbox(item.imageUrl)">
+                                <div v-else class="thumb-placeholder">
+  <img src="money-bag02.svg" alt="money bag">
+</div>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <strong style="font-size: 1.1em;">{{ item.品項 }}</strong>
+                                    <span style="color: #ff7675; font-weight: bold;">${{ item.金額 }}</span>
+                                </div>
+                                <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                    {{ item.displayDate }} | <span class="tag">{{ item.小分類 }}</span> | {{ item.付款方式 }}
+                                </div>
+                                <div v-if="item.備註" style="font-size: 12px; color: #bbb; margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+  <i class="fa-solid fa-clipboard-list" style="color: var(--primary);"></i>
+  {{ item.備註 }}
+</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="processedLogs.length === 0" style="text-align:center; color:#ccc; margin-top:50px;">
+                        找不到符合條件的帳目喔！
+                    </div>
+                </div>
+
+                <div v-if="activeTab === 'chart'">
+                    <div class="card">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 20px;">
+                            <input type="month" v-model="selectedMonth" @change="setFilterMonth(selectedMonth)" class="date-input" style="grid-column: span 2;">
+                            <input type="date" v-model="filter.start" class="date-input">
+                            <input type="date" v-model="filter.end" class="date-input">
+                        </div>
+                        <div style="position: relative; height:300px;">
+                            <canvas id="myChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <p>總支出：<strong style="color: #ff7675;">${{ totalExpense }}</strong></p>
+                        <div style="margin-top: 12px; border-top: 1px dashed #eee; padding-top: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" @click="showPaymentFilter = !showPaymentFilter">
+                                <p style="font-size: 13px; color: #888; margin: 0;"><i class="fa-solid fa-credit-card" style="margin-right: 4px;"></i>付款方式</p>
+                                <i :class="showPaymentFilter ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" style="color: #ccc; font-size: 12px;"></i>
+                            </div>
+                            <transition name="slide-fade">
+                                <div v-if="showPaymentFilter">
+                                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                                        <label v-for="p in payments" :key="p" style="display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; background: #fdf0f0; border-radius: 20px; padding: 4px 12px; border: 1px solid #ffd6d6;"
+                                            :style="selectedPayments.includes(p) ? 'background: #ffb7b2; border-color: #ff7675; font-weight: bold;' : ''">
+                                            <input type="checkbox" :value="p" v-model="selectedPayments" style="display: none;">
+                                            {{ p }}
+                                        </label>
+                                    </div>
+                                    <div v-if="paymentSummary !== null" style="margin-top: 10px; font-size: 14px;">
+                                        {{ selectedPayments.join(' + ') }} 小計：
+                                        <strong style="color: #ff7675;">${{ paymentSummary }}</strong>
+                                    </div>
+                                </div>
+                            </transition>
+                        </div>
+                    </div>
+
+                    <!-- 付款方式篩選明細 -->
+                    <transition name="slide-fade">
+                        <div v-if="paymentFilteredLogs.length > 0">
+                            <div style="margin: 10px 4px 6px;">
+                                <strong style="color: var(--primary);">符合明細</strong>
+                            </div>
+                            <div class="card log-item" v-for="item in paymentFilteredLogs" :key="item.id" @click="editLog(item)">
+                                <div style="display: flex; align-items: center;">
+                                    <div class="thumb-box">
+                                        <img v-if="item.imageUrl" :src="item.imageUrl" class="thumb" @click.stop="openLightbox(item.imageUrl)">
+                                        <div v-else class="thumb-placeholder">
+                                            <img src="money-bag02.svg" alt="money bag">
+                                        </div>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <strong style="font-size: 1.1em;">{{ item.品項 }}</strong>
+                                            <span style="color: #ff7675; font-weight: bold;">${{ item.金額 }}</span>
+                                        </div>
+                                        <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                            {{ item.displayDate }} | <span class="tag">{{ item.小分類 }}</span> | {{ item.付款方式 }}
+                                        </div>
+                                        <div v-if="item.備註" style="font-size: 12px; color: #bbb; margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+                                            <i class="fa-solid fa-clipboard-list" style="color: var(--primary);"></i>
+                                            {{ item.備註 }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </transition>
+
+                    <!-- 點擊圓餅圖後的明細列表 -->
+                    <transition name="slide-fade">
+                        <div v-if="chartDrillCategory">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 4px 6px;">
+                                <strong style="color: var(--primary);">{{ chartDrillCategory }} 明細</strong>
+                                <button @click="chartDrillCategory = null" style="background: none; border: none; color: #aaa; font-size: 14px; cursor: pointer;">✕ 關閉</button>
+                            </div>
+                            <div class="card log-item" v-for="item in drillLogs()" :key="item.id" @click="editLog(item)">
+                                <div style="display: flex; align-items: center;">
+                                    <div class="thumb-box">
+                                        <img v-if="item.imageUrl" :src="item.imageUrl" class="thumb" @click.stop="openLightbox(item.imageUrl)">
+                                        <div v-else class="thumb-placeholder">
+                                            <img src="money-bag02.svg" alt="money bag">
+                                        </div>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <strong style="font-size: 1.1em;">{{ item.品項 }}</strong>
+                                            <span style="color: #ff7675; font-weight: bold;">${{ item.金額 }}</span>
+                                        </div>
+                                        <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                                            {{ item.displayDate }} | <span class="tag">{{ item.小分類 }}</span> | {{ item.付款方式 }}
+                                        </div>
+                                        <div v-if="item.備註" style="font-size: 12px; color: #bbb; margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+                                            <i class="fa-solid fa-clipboard-list" style="color: var(--primary);"></i>
+                                            {{ item.備註 }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </transition>
+                </div>
+
+                <div v-if="activeTab === 'settings' && isAdmin">
+                    <div class="card">
+                        <h3><i class="fa-solid fa-folder-open" style="color: var(--primary); margin-right: 6px;"></i>分類管理</h3>
+                        <div v-for="(cat, index) in categoryData" :key="'cat'+index" class="setting-row">
+                            <input v-model="cat.main" placeholder="大類" style="width: 70px;">
+                            <input v-model="cat.subRaw" placeholder="小類(逗號隔開)" style="flex: 1;">
+                            <div class="move-btns">
+                                <button @click="moveItem(categoryData, index, -1)">▲</button>
+                                <button @click="moveItem(categoryData, index, 1)">▼</button>
+                            </div>
+                            <button @click="categoryData.splice(index, 1)" class="btn-del-circle">✕</button>
+                        </div>
+                        <button @click="categoryData.push({main:'', subRaw:''})" class="btn-small">+ 新增大分類</button>
+
+                        <h3 style="margin-top:20px;"><i class="fa-solid fa-credit-card" style="color: var(--primary); margin-right: 6px;"></i>付款方式</h3>
+                        <div v-for="(p, index) in payments" :key="'pay'+index" class="setting-row">
+                            <input v-model="payments[index]" style="flex:1">
+                            <div class="move-btns">
+                                <button @click="moveItem(payments, index, -1)">▲</button>
+                                <button @click="moveItem(payments, index, 1)">▼</button>
+                            </div>
+                            <button @click="payments.splice(index, 1)" class="btn-del-circle">✕</button>
+                        </div>
+                        <button @click="payments.push('')" class="btn-small">+ 新增付款方式</button>
+                        <button class="btn" @click="saveSettings" :disabled="loading">
+                            <span v-if="loading" class="loading-spinner"></span>
+                            {{ loading ? '同步中...' : '確定儲存' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <div class="modal-overlay" v-if="showAddModal" @click.self="closeModal">
+            <div class="modal-content">
+                <h3 style="text-align:center">
+                    <i :class="form.id ? 'fa-solid fa-pen' : 'fa-solid fa-star'" style="color: var(--primary); margin-right: 6px;"></i>
+                    {{ form.id ? '修改支出' : '新增支出' }}
+                </h3>
+                <div class="category-grid">
+                    <div v-for="cat in categoryData" class="cat-btn" :class="{active: selectedMain === cat.main}" @click="selectMain(cat.main)">
+                        {{ cat.main || '未命名' }}
+                    </div>
+                </div>
+                <div v-if="selectedMain" class="sub-category-box">
+                    <div v-for="sub in getSubCategories(selectedMain)" class="cat-btn-sub" :class="{active: form.subCategory === sub}" @click="form.subCategory = sub">
+                        {{ sub }}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="date" v-model="form.date">
+                    <input type="text" placeholder="品項" v-model="form.item">
+                    <input type="number" placeholder="金額" v-model="form.amount">
+                    <select v-model="form.payment">
+                        <option value="" disabled>付款方式</option>
+                        <option v-for="p in payments" :value="p">{{ p }}</option>
+                    </select>
+                    <textarea placeholder="備註" v-model="form.note" rows="2"></textarea>
+                    <div style="margin-top:10px; border: 1px dashed #ccc; padding: 10px; border-radius: 10px;">
+                        <label style="font-size: 12px; color: #888; display: block; margin-bottom: 5px;"><i class="fa-solid fa-camera" style="margin-right: 4px;"></i>圖片管理：</label>
+                        <div v-if="form.imageData || form.imageUrl" style="position: relative; margin-bottom: 10px;">
+                            <img :src="form.imageData || form.imageUrl" style="width: 100%; border-radius: 8px; display: block;">
+                            <button @click="removeImage" class="btn-del-img" type="button">✕ 移除圖片</button>
+                        </div>
+                        <input type="file" accept="image/*" @change="handleFileUpload" id="fileInput">
+                    </div>
+                </div>
+                <button class="btn" @click="submitAdd" :disabled="loading">
+                    <span v-if="loading" class="loading-spinner"></span>
+                    {{ loading ? '同步中...' : '確定儲存' }}
+                </button>
+                <button v-if="form.id" class="btn btn-danger" @click="deleteLog(form.id)">刪除此筆</button>
+                <button class="btn btn-cancel" @click="closeModal">取消</button>
+            </div>
+        </div>
+
+        <div class="add-btn" v-if="activeTab === 'list' && isAdmin" @click="openAddModal">
+            <i class="fa-solid fa-plus"></i>
+        </div>
+
+        <div v-if="lightboxUrl" class="lightbox" @click.self="closeLightbox">
+            <img :src="lightboxUrl" :style="zoomStyle" @touchstart="handleTouchStartImg" @touchmove="handleTouchMoveImg" @touchend="handleTouchEndImg" draggable="false">
+            <button class="close-btn" @click="closeLightbox">✕</button>
+        </div>
+        
+        <transition name="fade">
+            <div v-if="toastMsg" class="toast-overlay">
+                <div class="toast-box">{{ toastMsg }}</div>
+            </div>
+        </transition>
+
+        <nav class="bottom-nav">
+            <div class="nav-item" :class="{active: activeTab==='list'}" @click="activeTab='list'">
+                <i class="fa-solid fa-rectangle-list"></i>
+                <div>明細</div>
+            </div>
+            <div class="nav-item" :class="{active: activeTab==='chart'}" @click="activeTab='chart'">
+                <i class="fa-solid fa-chart-pie"></i>
+                <div>統計</div>
+            </div>
+            <div class="nav-item" v-if="isAdmin" :class="{active: activeTab==='settings'}" @click="activeTab='settings'">
+                <i class="fa-solid fa-gear"></i>
+                <div>設定</div>
+            </div>
+        </nav>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

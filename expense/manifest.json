@@ -1,0 +1,22 @@
+{
+  "name": "微時記帳 - 簡約生活小工具",
+  "short_name": "微時記帳",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff9f9",
+  "theme_color": "#ffb7b2",
+  "icons": [
+    {
+      "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768590839759_money-bag.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768590839759_money-bag.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
