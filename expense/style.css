@@ -1,11 +1,5 @@
 /* --- 1. 字體與基礎設定 --- */
-@font-face {
-    font-family: 'OpenHuninn';
-    src: url('https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
+/* 字體改由 CDN 載入（見 index.html 的 <link>），不再需要 @font-face 自架 */
 
 :root {
     --primary: #ffb7b2;    /* 粉紅 */
@@ -19,7 +13,7 @@
 
 /* 強制套用字體並移除預設邊距 */
 body, input, select, textarea, button {
-    font-family: 'OpenHuninn', 'Noto Sans TC', sans-serif !important;
+    font-family: 'jfOpenHuninn', 'Noto Sans TC', sans-serif !important;
 }
 
 body {
