@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <link id="manifest-link" rel="manifest" href="manifest.json">
-    <link rel="preload" href="https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf" as="font" type="font/ttf" crossorigin="anonymous">
+    <link href="https://font.emtech.cc/css/jfOpenHuninn" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -42,7 +42,12 @@
                             <div class="filter-grid">
                                 <div class="filter-input-group full-width">
                                     <label>快速選月份</label>
-                                    <input type="month" v-model="selectedMonth" @change="setFilterMonth(selectedMonth)" :list="monthOptions.length ? 'month-options' : null">
+                                    <div style="display:flex; gap:6px;">
+                                        <input type="month" v-model="selectedMonth" @change="setFilterMonth(selectedMonth)" :list="monthOptions.length ? 'month-options' : null" style="flex:1;">
+                                        <button type="button" class="btn-small" @click="setFilterMonth(selectedMonth)" title="重新對齊本月區間">
+                                            <i class="fa-solid fa-rotate"></i>
+                                        </button>
+                                    </div>
                                     <datalist id="month-options">
                                         <option v-for="month in monthOptions" :value="month"></option>
                                     </datalist>
@@ -108,7 +113,12 @@
                 <div v-if="activeTab === 'chart'">
                     <div class="card">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 20px;">
-                            <input type="month" v-model="selectedMonth" @change="setFilterMonth(selectedMonth)" class="date-input" style="grid-column: span 2;">
+                            <div style="grid-column: span 2; display:flex; gap:6px;">
+                                <input type="month" v-model="selectedMonth" @change="setFilterMonth(selectedMonth)" class="date-input" style="flex:1;">
+                                <button type="button" class="btn-small" @click="setFilterMonth(selectedMonth)" title="重新對齊本月區間">
+                                    <i class="fa-solid fa-rotate"></i>
+                                </button>
+                            </div>
                             <input type="date" v-model="filter.start" class="date-input">
                             <input type="date" v-model="filter.end" class="date-input">
                         </div>
