@@ -1,4 +1,4 @@
-const CACHE_NAME = 'v2_cloudflare';
+const CACHE_NAME = 'v3_cloudflare';
 const urlsToCache = [
   './',
   './index.html', // 換成你的 html 檔名
