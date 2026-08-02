@@ -88,6 +88,66 @@
   }
   .hint{ font-size:12px; color:var(--muted); margin-top:6px; }
 
+  /* ===== 新增：選項輸入列與按鈕組件 ===== */
+  .item-input-row{
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .item-input-row input{
+    flex: 1;
+  }
+  .btn-add-item{
+    padding: 12px 16px;
+    background: var(--brand-tint);
+    color: var(--brand-dark);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .btn-add-item:active{
+    background: var(--border);
+  }
+
+  /* ===== 新增：選項列表樣式 ===== */
+  .item-chip-input .chips{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .chip-item{
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .chip-item .text{
+    word-break: break-all;
+    font-weight: 500;
+  }
+  .chip-item .del-btn{
+    border: none;
+    background: none;
+    color: var(--danger);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 6px;
+    margin-right: -4px;
+    font-weight: 500;
+  }
+  /* ===================================== */
+
   .cta-bar{
     position:fixed; left:0; right:0; bottom:0;
     padding:14px 18px calc(14px + env(safe-area-inset-bottom));
@@ -131,13 +191,11 @@
     position:fixed; top:16px; left:50%; transform:translateX(-50%);
     background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px;
     font-size:13.5px; z-index:60; opacity:0; transition:opacity .2s;
+    pointer-events: none;
   }
   .toast.show{ opacity:1; }
 
   .center-msg{ text-align:center; padding:60px 20px; color:var(--muted); font-size:14px; }
-  .item-chip-input .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-  .chip{ background:var(--brand-tint); color:var(--brand-dark); font-size:12.5px; padding:5px 10px; border-radius:999px; display:flex; align-items:center; gap:6px; }
-  .chip button{ border:none; background:none; color:var(--brand-dark); cursor:pointer; font-size:12px; padding:0; }
 </style>
 </head>
 <body>
@@ -299,7 +357,10 @@ async function renderCreate(){
 
     <label>報名選項</label>
     <div class="item-chip-input">
-      <input type="text" id="itemInput" placeholder="輸入一個選項，按 Enter 新增">
+      <div class="item-input-row">
+        <input type="text" id="itemInput" placeholder="輸入選項（如：參加、+1）">
+        <button type="button" class="btn-add-item" onclick="addItemFromInput()">＋新增</button>
+      </div>
       <div class="chips" id="chipsBox"></div>
     </div>
 
@@ -317,24 +378,41 @@ async function renderCreate(){
     </div></div>
   `;
 
+  // 手機鍵盤按下 Enter 或完成時亦可新增
   document.getElementById('itemInput').addEventListener('keydown', e => {
     if (e.key === 'Enter'){
       e.preventDefault();
-      const v = e.target.value.trim();
-      if (v && !createItems.includes(v)){
-        createItems.push(v);
-        e.target.value = '';
-        renderChips();
-      }
+      addItemFromInput();
     }
   });
 }
 
+function addItemFromInput(){
+  const input = document.getElementById('itemInput');
+  const v = input.value.trim();
+  if (!v) return;
+  if (createItems.includes(v)){
+    toast('選項已存在');
+    return;
+  }
+  createItems.push(v);
+  input.value = '';
+  renderChips();
+  input.focus(); // 讓輸入框保持 focus 方便連續新增
+}
+
 function renderChips(){
   const box = document.getElementById('chipsBox');
-  box.innerHTML = createItems.map((it, idx) =>
-    `<span class="chip">${escapeHtml(it)}<button onclick="removeChip(${idx})">✕</button></span>`
-  ).join('');
+  if (createItems.length === 0){
+    box.innerHTML = '';
+    return;
+  }
+  box.innerHTML = createItems.map((it, idx) => `
+    <div class="chip-item">
+      <span class="text">${escapeHtml(it)}</span>
+      <button type="button" class="del-btn" onclick="removeChip(${idx})">刪除</button>
+    </div>
+  `).join('');
 }
 
 function removeChip(idx){
