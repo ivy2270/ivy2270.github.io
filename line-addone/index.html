@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>活動管理</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -224,13 +227,20 @@ function toast(msg){
 function api(action, payload){
   return fetch(GAS_API_URL, {
     method: 'POST',
+    cache: 'no-store',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 用 text/plain 避免瀏覽器送出 CORS 預檢請求
-    body: JSON.stringify({ apiAction: action, idToken: idToken, payload: payload || {} })
+    body: JSON.stringify({
+      apiAction: action,
+      idToken: idToken,
+      payload: payload || {},
+      cacheBust: Date.now()
+    })
   }).then(r => r.json());
 }
 
 async function init(){
   try{
+    clearLiffLocalCache();
     await liff.init({ liffId: LIFF_ID });
     if (!liff.isLoggedIn()){ liff.login(); return; }
     idToken = liff.getIDToken();
@@ -251,6 +261,19 @@ async function init(){
     }
   } catch(err){
     app.innerHTML = '<div class="center-msg">無法連線，請確認是從 LINE 內開啟這個頁面。</div>';
+  }
+}
+
+function clearLiffLocalCache(){
+  try {
+    localStorage.removeItem('boundName');
+    localStorage.removeItem('lineName');
+    localStorage.removeItem('myProfile');
+    sessionStorage.removeItem('boundName');
+    sessionStorage.removeItem('lineName');
+    sessionStorage.removeItem('myProfile');
+  } catch (e) {
+    // LIFF 內建瀏覽器可能限制 storage；忽略即可，後端資料仍以 Sheet 為準。
   }
 }
 
@@ -326,9 +349,23 @@ async function submitBind(){
 
   myProfile.boundName = res.boundName;
 
-  // 跳出提示視窗，點擊「確定」後自動關閉 LIFF
-  alert('姓名綁定完成！請回到群組重新點擊一次報名按鈕。');
-  liff.closeWindow();
+  if (res.pendingRegistration){
+    const message = '姓名綁定完成！請回到群組重新點擊一次報名按鈕';
+    if (liff.isInClient()) {
+      await liff.alert(message);
+    } else {
+      alert(message);
+    }
+    app.innerHTML = `<div class="center-msg" style="padding-top:100px;">✅ 姓名綁定完成！<br><br>請回到群組重新點擊一次報名按鈕</div>
+      <div class="cta-bar"><div class="cta-bar-inner"><button class="primary" onclick="liff.closeWindow()">回到 LINE</button></div></div>`;
+  } else {
+    if (liff.isInClient()) {
+      await liff.alert('姓名綁定完成！');
+    } else {
+      toast('姓名綁定完成！');
+    }
+    renderHome();
+  }
 }
 
 // ---------- 發起活動 ----------
