@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>活動管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{
+    --bg: #F3F6F5;
+    --card: #FFFFFF;
+    --ink: #16302B;
+    --muted: #6B7B78;
+    --border: #DCE6E2;
+    --brand: #2F7566;
+    --brand-dark: #234F45;
+    --brand-tint: #E4F0EC;
+    --danger: #B4483A;
+    --danger-tint: #F7E7E4;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Noto Sans TC', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3{ font-family:'Noto Serif TC', serif; margin:0; }
+  .app{
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 20px 18px calc(96px + env(safe-area-inset-bottom));
+    position: relative;
+  }
+  .topbar{
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:16px;
+  }
+  .back-btn{
+    border:none; background:none; color:var(--brand);
+    font-size:15px; font-weight:500; padding:6px 4px; cursor:pointer;
+  }
+  .idcard{
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+    color:#fff;
+    border-radius:16px;
+    padding:18px 20px;
+    margin-bottom:20px;
+    box-shadow: 0 8px 20px rgba(47,117,102,0.22);
+  }
+  .idcard .eyebrow{ font-size:11px; letter-spacing:0.08em; opacity:0.75; margin-bottom:4px; }
+  .idcard .name{ font-family:'Noto Serif TC', serif; font-size:22px; font-weight:700; }
+  .idcard .sub{ font-size:12px; opacity:0.85; margin-top:6px; }
+
+  .menu{ display:flex; flex-direction:column; gap:12px; }
+  .menu-item{
+    display:flex; align-items:center; gap:14px;
+    background: var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .menu-item .icon{
+    width:40px; height:40px; border-radius:10px;
+    background: var(--brand-tint); color: var(--brand);
+    display:flex; align-items:center; justify-content:center;
+    font-size:19px; flex-shrink:0;
+  }
+  .menu-item.danger .icon{ background: var(--danger-tint); color: var(--danger); }
+  .menu-item .title{ font-weight:700; font-size:15px; }
+  .menu-item .desc{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+
+  label{ display:block; font-size:13px; font-weight:500; color:var(--muted); margin:18px 0 6px; }
+  input[type=text]{
+    width:100%; padding:12px 14px; border:1px solid var(--border);
+    border-radius:10px; font-size:15px; font-family:inherit; background:#fff;
+  }
+  input[type=text]:focus{ outline:2px solid var(--brand); outline-offset:1px; }
+  .select-wrap select{
+    width:100%; padding:12px 14px; border:1px solid var(--border);
+    border-radius:10px; font-size:15px; font-family:inherit; background:#fff; appearance:none;
+  }
+  .hint{ font-size:12px; color:var(--muted); margin-top:6px; }
+
+  .cta-bar{
+    position:fixed; left:0; right:0; bottom:0;
+    padding:14px 18px calc(14px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 60%, rgba(243,246,245,0));
+  }
+  .cta-bar-inner{ max-width:480px; margin:0 auto; }
+  button.primary{
+    width:100%; padding:14px; border:none; border-radius:12px;
+    background: var(--brand); color:#fff; font-size:15.5px; font-weight:700;
+    font-family:inherit; cursor:pointer;
+  }
+  button.primary:disabled{ opacity:0.5; }
+  button.primary.danger{ background: var(--danger); }
+
+  .event-list{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+  .event-item{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:14px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;
+  }
+  .event-item .name{ font-weight:700; font-size:14.5px; }
+  .event-item .tag{ font-size:11px; color:var(--danger); border:1px solid var(--danger); border-radius:999px; padding:3px 9px; }
+
+  .empty{ text-align:center; padding:40px 10px; color:var(--muted); font-size:14px; }
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(22,48,43,0.45);
+    display:flex; align-items:flex-end; justify-content:center; z-index:50;
+  }
+  .sheet{
+    background:#fff; width:100%; max-width:480px; border-radius:18px 18px 0 0;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom));
+  }
+  .sheet h3{ font-size:17px; margin-bottom:8px; }
+  .sheet p{ font-size:14px; color:var(--muted); line-height:1.6; margin:0 0 18px; }
+  .sheet-actions{ display:flex; gap:10px; }
+  .sheet-actions button{ flex:1; padding:12px; border-radius:10px; font-size:14.5px; font-weight:700; font-family:inherit; cursor:pointer; }
+  .sheet-actions .cancel{ background:var(--bg); border:1px solid var(--border); color:var(--ink); }
+  .sheet-actions .confirm{ background:var(--danger); border:none; color:#fff; }
+
+  .toast{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px;
+    font-size:13.5px; z-index:60; opacity:0; transition:opacity .2s;
+  }
+  .toast.show{ opacity:1; }
+
+  .center-msg{ text-align:center; padding:60px 20px; color:var(--muted); font-size:14px; }
+  .item-chip-input .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chip{ background:var(--brand-tint); color:var(--brand-dark); font-size:12.5px; padding:5px 10px; border-radius:999px; display:flex; align-items:center; gap:6px; }
+  .chip button{ border:none; background:none; color:var(--brand-dark); cursor:pointer; font-size:12px; padding:0; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="center-msg" id="loading">連結中，請稍候…</div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+// ====== 設定：換成你自己的值 ======
+const LIFF_ID = '請填入你的 LIFF ID';
+const GAS_API_URL = '請填入你的 GAS Web App 網址（/exec 結尾）';
+// ===================================
+
+let idToken = null;
+let myProfile = { boundName: null, lineName: null };
+const app = document.getElementById('app');
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function api(action, payload){
+  return fetch(GAS_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 用 text/plain 避免瀏覽器送出 CORS 預檢請求
+    body: JSON.stringify({ apiAction: action, idToken: idToken, payload: payload || {} })
+  }).then(r => r.json());
+}
+
+async function init(){
+  try{
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()){ liff.login(); return; }
+    idToken = liff.getIDToken();
+
+    const profileRes = await api('getProfile');
+    if (profileRes.ok){
+      myProfile.boundName = profileRes.boundName;
+      myProfile.lineName = profileRes.lineName;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const view = params.get('view');
+
+    if (view === 'bind' || !myProfile.boundName){
+      renderBind();
+    } else {
+      renderHome();
+    }
+  } catch(err){
+    app.innerHTML = '<div class="center-msg">無法連線，請確認是從 LINE 內開啟這個頁面。</div>';
+  }
+}
+
+function idCardHtml(){
+  const name = myProfile.boundName || '尚未綁定';
+  return `
+    <div class="idcard">
+      <div class="eyebrow">目前身分</div>
+      <div class="name">${escapeHtml(name)}</div>
+      <div class="sub">${myProfile.boundName ? '姓名已綁定，之後所有活動都會記住您' : '請先完成姓名綁定'}</div>
+    </div>`;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- 首頁 ----------
+function renderHome(){
+  app.innerHTML = `
+    ${idCardHtml()}
+    <div class="menu">
+      <div class="menu-item" onclick="renderBind()">
+        <div class="icon">👤</div>
+        <div>
+          <div class="title">${myProfile.boundName ? '修改綁定姓名' : '綁定姓名'}</div>
+          <div class="desc">讓群組報名名單顯示您的真實姓名</div>
+        </div>
+      </div>
+      <div class="menu-item" onclick="renderCreate()">
+        <div class="icon">📋</div>
+        <div>
+          <div class="title">發起新活動</div>
+          <div class="desc">設定選項，選擇要發到哪個群組</div>
+        </div>
+      </div>
+      <div class="menu-item danger" onclick="renderEnd()">
+        <div class="icon">🛑</div>
+        <div>
+          <div class="title">結束活動</div>
+          <div class="desc">結束您發起、目前進行中的活動</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ---------- 姓名綁定 ----------
+function renderBind(){
+  app.innerHTML = `
+    <div class="topbar"><button class="back-btn" onclick="renderHome()">‹ 返回</button></div>
+    <h2>姓名綁定</h2>
+    <p class="hint" style="margin-top:6px;">綁定後，群組裡的報名名單會顯示這個姓名，僅需設定一次。</p>
+    <label>真實姓名</label>
+    <input type="text" id="bindNameInput" placeholder="例如：王小明" value="${escapeHtml(myProfile.boundName || '')}">
+    <div class="cta-bar"><div class="cta-bar-inner">
+      <button class="primary" id="bindBtn" onclick="submitBind()">儲存</button>
+    </div></div>
+  `;
+  document.getElementById('bindNameInput').focus();
+}
+
+async function submitBind(){
+  const val = document.getElementById('bindNameInput').value.trim();
+  if (!val){ toast('請輸入姓名'); return; }
+  const btn = document.getElementById('bindBtn');
+  btn.disabled = true; btn.textContent = '儲存中…';
+
+  const res = await api('bindName', { realName: val });
+  btn.disabled = false; btn.textContent = '儲存';
+
+  if (!res.ok){ toast('儲存失敗，請再試一次'); return; }
+
+  myProfile.boundName = res.boundName;
+
+  if (res.completedRegistration){
+    app.innerHTML = `<div class="center-msg" style="padding-top:100px;">✅ 姓名已綁定<br>「${escapeHtml(res.completedRegistration)}」的報名也已一併完成<br><br>可以關閉這個頁面回到群組查看</div>
+      <div class="cta-bar"><div class="cta-bar-inner"><button class="primary" onclick="liff.closeWindow()">關閉</button></div></div>`;
+  } else {
+    toast('已儲存');
+    renderHome();
+  }
+}
+
+// ---------- 發起活動 ----------
+let createItems = [];
+
+async function renderCreate(){
+  app.innerHTML = `<div class="center-msg">讀取群組清單中…</div>`;
+  const res = await api('listGroups');
+  const groups = (res.ok && res.groups) || [];
+  createItems = [];
+
+  const groupOptions = groups.length > 0
+    ? groups.map(g => `<option value="${g.groupId}">${escapeHtml(g.groupName)}</option>`).join('')
+    : '';
+
+  app.innerHTML = `
+    <div class="topbar"><button class="back-btn" onclick="renderHome()">‹ 返回</button></div>
+    <h2>發起新活動</h2>
+
+    <label>活動名稱</label>
+    <input type="text" id="eventNameInput" placeholder="例如：7/30 部門聚餐">
+
+    <label>報名選項</label>
+    <div class="item-chip-input">
+      <input type="text" id="itemInput" placeholder="輸入一個選項，按 Enter 新增">
+      <div class="chips" id="chipsBox"></div>
+    </div>
+
+    <label>發到哪個群組</label>
+    <div class="select-wrap">
+      <select id="groupSelect">
+        <option value="" disabled selected>請選擇群組</option>
+        ${groupOptions}
+      </select>
+    </div>
+    ${groups.length === 0 ? '<div class="hint">目前還沒有登記到任何群組——機器人需要先在該群組裡收到過一則訊息或互動，才會被記錄下來。</div>' : ''}
+
+    <div class="cta-bar"><div class="cta-bar-inner">
+      <button class="primary" id="createBtn" onclick="submitCreate()">發布活動</button>
+    </div></div>
+  `;
+
+  document.getElementById('itemInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      const v = e.target.value.trim();
+      if (v && !createItems.includes(v)){
+        createItems.push(v);
+        e.target.value = '';
+        renderChips();
+      }
+    }
+  });
+}
+
+function renderChips(){
+  const box = document.getElementById('chipsBox');
+  box.innerHTML = createItems.map((it, idx) =>
+    `<span class="chip">${escapeHtml(it)}<button onclick="removeChip(${idx})">✕</button></span>`
+  ).join('');
+}
+
+function removeChip(idx){
+  createItems.splice(idx, 1);
+  renderChips();
+}
+
+async function submitCreate(){
+  const eventName = document.getElementById('eventNameInput').value.trim();
+  const groupId = document.getElementById('groupSelect').value;
+
+  if (!eventName){ toast('請輸入活動名稱'); return; }
+  if (createItems.length === 0){ toast('請至少新增一個報名選項'); return; }
+  if (!groupId){ toast('請選擇要發到哪個群組'); return; }
+
+  const btn = document.getElementById('createBtn');
+  btn.disabled = true; btn.textContent = '發布中…';
+
+  const res = await api('createEvent', { eventName, items: createItems, groupId });
+  btn.disabled = false; btn.textContent = '發布活動';
+
+  if (!res.ok){
+    toast(res.error === 'NAME_NOT_BOUND' ? '請先綁定姓名' : '發布失敗，請再試一次');
+    return;
+  }
+
+  app.innerHTML = `<div class="center-msg" style="padding-top:100px;">✅ 活動已發布到群組</div>
+    <div class="cta-bar"><div class="cta-bar-inner"><button class="primary" onclick="liff.closeWindow()">關閉</button></div></div>`;
+}
+
+// ---------- 結束活動 ----------
+async function renderEnd(){
+  app.innerHTML = `<div class="center-msg">讀取活動中…</div>`;
+  const res = await api('listMyOngoingEvents');
+  const events = (res.ok && res.events) || [];
+
+  app.innerHTML = `
+    <div class="topbar"><button class="back-btn" onclick="renderHome()">‹ 返回</button></div>
+    <h2>結束活動</h2>
+    <p class="hint" style="margin-top:6px;">只會列出您發起、目前進行中的活動。</p>
+    <div class="event-list" id="eventList">
+      ${events.length === 0
+        ? '<div class="empty">目前沒有進行中的活動</div>'
+        : events.map(ev => `
+          <div class="event-item" onclick="confirmEnd('${ev.eventId}', '${escapeHtml(ev.eventName)}')">
+            <span class="name">${escapeHtml(ev.eventName)}</span>
+            <span class="tag">進行中</span>
+          </div>`).join('')}
+    </div>
+  `;
+}
+
+function confirmEnd(eventId, eventName){
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="sheet">
+      <h3>確定要結束活動嗎？</h3>
+      <p>「${eventName}」結束後將無法再進行投票/報名，此動作無法復原。</p>
+      <div class="sheet-actions">
+        <button class="cancel" id="cancelEndBtn">取消</button>
+        <button class="confirm" id="confirmEndBtn">確定結束</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  document.getElementById('cancelEndBtn').onclick = () => overlay.remove();
+  document.getElementById('confirmEndBtn').onclick = async () => {
+    document.getElementById('confirmEndBtn').textContent = '處理中…';
+    const res = await api('endEvent', { eventId });
+    overlay.remove();
+    if (!res.ok){ toast('操作失敗，請再試一次'); return; }
+    toast('活動已結束');
+    renderEnd();
+  };
+}
+
+init();
+</script>
+</body>
+</html>
