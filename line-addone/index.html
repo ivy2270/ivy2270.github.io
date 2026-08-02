@@ -326,13 +326,9 @@ async function submitBind(){
 
   myProfile.boundName = res.boundName;
 
-  if (res.completedRegistration){
-    app.innerHTML = `<div class="center-msg" style="padding-top:100px;">✅ 姓名已綁定<br>「${escapeHtml(res.completedRegistration)}」的報名也已一併完成<br><br>可以關閉這個頁面回到群組查看</div>
-      <div class="cta-bar"><div class="cta-bar-inner"><button class="primary" onclick="liff.closeWindow()">關閉</button></div></div>`;
-  } else {
-    toast('已儲存');
-    renderHome();
-  }
+  // 跳出提示視窗，點擊「確定」後自動關閉 LIFF
+  alert('姓名綁定完成！請回到群組重新點擊一次報名按鈕。');
+  liff.closeWindow();
 }
 
 // ---------- 發起活動 ----------
