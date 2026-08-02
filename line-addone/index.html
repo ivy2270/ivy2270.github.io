@@ -349,22 +349,13 @@ async function submitBind(){
 
   myProfile.boundName = res.boundName;
 
-  if (res.pendingRegistration){
-    const message = '姓名綁定完成！請回到群組重新點擊一次報名按鈕';
-    if (liff.isInClient()) {
-      await liff.alert(message);
-    } else {
-      alert(message);
-    }
-    app.innerHTML = `<div class="center-msg" style="padding-top:100px;">✅ 姓名綁定完成！<br><br>請回到群組重新點擊一次報名按鈕</div>
-      <div class="cta-bar"><div class="cta-bar-inner"><button class="primary" onclick="liff.closeWindow()">回到 LINE</button></div></div>`;
+  const message = '姓名綁定完成！請回到群組重新點擊一次報名按鈕。';
+  if (liff.isInClient()) {
+    await liff.alert(message);
+    liff.closeWindow();
   } else {
-    if (liff.isInClient()) {
-      await liff.alert('姓名綁定完成！');
-    } else {
-      toast('姓名綁定完成！');
-    }
-    renderHome();
+    alert(message);
+    liff.closeWindow();
   }
 }
 
