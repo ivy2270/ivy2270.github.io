@@ -91,6 +91,7 @@
   }
   .hint{ font-size:12px; color:var(--muted); margin-top:6px; }
 
+  /* ===== 新增：選項輸入列與按鈕組件 ===== */
   .item-input-row{
     display: flex;
     gap: 8px;
@@ -116,6 +117,7 @@
     background: var(--border);
   }
 
+  /* ===== 新增：選項列表樣式 ===== */
   .item-chip-input .chips{
     display: flex;
     flex-direction: column;
@@ -147,6 +149,7 @@
     margin-right: -4px;
     font-weight: 500;
   }
+  /* ===================================== */
 
   .cta-bar{
     position:fixed; left:0; right:0; bottom:0;
@@ -165,7 +168,7 @@
   .event-list{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
   .event-item{
     background:var(--card); border:1px solid var(--border); border-radius:12px;
-    padding:14px 16px; display:flex; justify-space-between; align-items:center; cursor:pointer;
+    padding:14px 16px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;
   }
   .event-item .name{ font-weight:700; font-size:14.5px; }
   .event-item .tag{ font-size:11px; color:var(--danger); border:1px solid var(--danger); border-radius:999px; padding:3px 9px; }
@@ -212,6 +215,7 @@ const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyOV9735KHfMfge5CB9
 
 let idToken = null;
 let myProfile = { boundName: null, lineName: null };
+let regContext = null; // 從群組卡片報名按鈕開啟時帶入：{ eventId, eventName, item, groupId }
 const app = document.getElementById('app');
 
 function toast(msg){
@@ -225,7 +229,7 @@ function api(action, payload){
   return fetch(GAS_API_URL, {
     method: 'POST',
     cache: 'no-store',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 用 text/plain 避免瀏覽器送出 CORS 預檢請求
     body: JSON.stringify({
       apiAction: action,
       idToken: idToken,
@@ -249,40 +253,24 @@ async function init(){
     }
 
     const params = new URLSearchParams(location.search);
-    const action = params.get('action');
     const view = params.get('view');
 
-    // 如果未綁定：跳轉至綁定畫面
-    if (!myProfile.boundName) {
-      renderBind();
-      return;
+    if (view === 'register' && params.get('event_id')){
+      regContext = {
+        eventId: params.get('event_id'),
+        eventName: params.get('event_name') || '',
+        item: params.get('item') || '',
+        groupId: params.get('group_id') || ''
+      };
     }
 
-    // 如果已綁定，且是從卡片點擊來的報名動作 (`action=register`)
-    if (action === 'register') {
-      const eventId = params.get('event_id');
-      const eventName = params.get('event_name');
-      const item = params.get('item');
-
-      if (eventId && item) {
-        document.getElementById('loading').textContent = '處理中，請稍候...';
-        const regRes = await api('directRegister', { eventId, eventName, item });
-        
-        if (regRes.ok) {
-          if (liff.isInClient()) {
-            liff.closeWindow();
-          } else {
-            alert('報名完成！');
-          }
-          return;
-        } else {
-          toast('操作失敗：' + (regRes.error || '無法連線'));
-        }
+    if (regContext){
+      if (myProfile.boundName){
+        await handleRegisterFromCard();
+      } else {
+        renderBind();
       }
-    }
-
-    // 一般開啟 LIFF 或顯式請求綁定頁面
-    if (view === 'bind') {
+    } else if (view === 'bind' || !myProfile.boundName){
       renderBind();
     } else {
       renderHome();
@@ -301,6 +289,7 @@ function clearLiffLocalCache(){
     sessionStorage.removeItem('lineName');
     sessionStorage.removeItem('myProfile');
   } catch (e) {
+    // LIFF 內建瀏覽器可能限制 storage；忽略即可，後端資料仍以 Sheet 為準。
   }
 }
 
@@ -376,15 +365,63 @@ async function submitBind(){
 
   myProfile.boundName = res.boundName;
 
-  const message = '姓名綁定完成！請回到群組重新點擊一次報名按鈕。';
-  
-  if (liff.isInClient()) {
-    await liff.alert(message);
-    liff.closeWindow();
+  if (regContext){
+    // 從報名卡片觸發的綁定：只提示回群組再點一次報名按鈕，
+    // 不自動報名、也不 push 任何訊息到群組（避免消耗 LINE OA 訊息數）。
+    const message = '姓名綁定完成！請回到群組重新點擊一次報名按鈕。';
+    if (liff.isInClient()) {
+      await liff.alert(message);
+      liff.closeWindow();
+    } else {
+      alert(message);
+      app.innerHTML = `<div class="center-msg" style="padding-top:100px;">✅ 姓名綁定完成！<br><br>請回到群組重新點擊一次報名按鈕</div>`;
+    }
+  } else if (res.pendingRegistration){
+    const message = '姓名綁定完成！請回到群組重新點擊一次報名按鈕';
+    if (liff.isInClient()) {
+      await liff.alert(message);
+      liff.closeWindow();
+    } else {
+      alert(message);
+      app.innerHTML = `<div class="center-msg" style="padding-top:100px;">✅ 姓名綁定完成！<br><br>請回到群組重新點擊一次報名按鈕</div>`;
+    }
   } else {
-    alert(message);
+    if (liff.isInClient()) {
+      await liff.alert('姓名綁定完成！');
+    } else {
+      toast('姓名綁定完成！');
+    }
     renderHome();
   }
+}
+
+// 已綁定姓名的使用者點卡片報名按鈕直接進來：不用再跳訊息，
+// 直接寫入 Google Sheet、把更新後的卡片 push 回群組，然後自動關閉視窗。
+async function handleRegisterFromCard(){
+  app.innerHTML = '<div class="center-msg" style="padding-top:100px;">處理中，請稍候…</div>';
+
+  const res = await api('registerFromCard', {
+    eventId: regContext.eventId,
+    eventName: regContext.eventName,
+    item: regContext.item,
+    groupId: regContext.groupId
+  });
+
+  let msg;
+  if (!res.ok){
+    if (res.error === 'EVENT_NOT_FOUND') msg = '⚠️ 找不到此活動，可能已被刪除。';
+    else if (res.error === 'EVENT_ENDED') msg = '⚠️ 此活動已結束，無法再報名。';
+    else if (res.error === 'NAME_NOT_BOUND') msg = '請先完成姓名綁定。';
+    else msg = '操作失敗，請回到群組重新點擊一次報名按鈕。';
+  } else {
+    msg = `🎉 已為您報名：${regContext.item}`;
+  }
+
+  app.innerHTML = `<div class="center-msg" style="padding-top:100px;">${escapeHtml(msg)}</div>
+    <div class="cta-bar"><div class="cta-bar-inner"><button class="primary" onclick="liff.closeWindow()">關閉</button></div></div>`;
+
+  // 讓使用者看清楚結果後自動關閉視窗
+  setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 1200);
 }
 
 // ---------- 發起活動 ----------
@@ -430,6 +467,7 @@ async function renderCreate(){
     </div></div>
   `;
 
+  // 手機鍵盤按下 Enter 或完成時亦可新增
   document.getElementById('itemInput').addEventListener('keydown', e => {
     if (e.key === 'Enter'){
       e.preventDefault();
@@ -449,7 +487,7 @@ function addItemFromInput(){
   createItems.push(v);
   input.value = '';
   renderChips();
-  input.focus();
+  input.focus(); // 讓輸入框保持 focus 方便連續新增
 }
 
 function renderChips(){
