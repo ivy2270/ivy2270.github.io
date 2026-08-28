@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>服藥提醒設定</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-color: var(--tg-theme-bg-color, #f4f4f7);
+      --card-bg: var(--tg-theme-secondary-bg-color, #ffffff);
+      --text-color: var(--tg-theme-text-color, #222222);
+      --hint-color: var(--tg-theme-hint-color, #8e8e93);
+      --btn-color: var(--tg-theme-button-color, #007aff);
+      --btn-text: var(--tg-theme-button-text-color, #ffffff);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 20px;
+      color: var(--text-color);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-color);
+    }
+
+    input[type="text"], input[type="time"], select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-size: 16px;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--btn-color);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background-color: var(--btn-color);
+      color: var(--btn-text);
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+    }
+
+    .tip {
+      font-size: 12px;
+      color: var(--hint-color);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>💊 新增服藥提醒</h2>
+    <form id="medForm">
+      <div class="form-group">
+        <label for="name">藥物名稱</label>
+        <input type="text" id="name" placeholder="例如：降血壓藥" required>
+      </div>
+
+      <div class="form-group">
+        <label for="dose_note">用量 / 備註</label>
+        <input type="text" id="dose_note" placeholder="例如：1 顆、飯後吃">
+      </div>
+
+      <div class="form-group">
+        <label for="time_of_day">提醒時間</label>
+        <input type="time" id="time_of_day" required value="08:00">
+      </div>
+
+      <div class="form-group">
+        <label for="meal_relation">餐前 / 餐後</label>
+        <select id="meal_relation">
+          <option value="none">無特殊限制</option>
+          <option value="before">飯前</option>
+          <option value="after">飯後</option>
+        </select>
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn-submit">儲存提醒設定</button>
+    </form>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand(); // 自動在手機上擴展開至全螢幕
+    }
+
+    // ⚠️ 請填寫你 Cloudflare Worker 的線上網址
+    const WORKER_URL = "https://medication-reminder-bot.ivy2270.workers.dev";
+
+    document.getElementById("medForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById("submitBtn");
+      submitBtn.disabled = true;
+      submitBtn.innerText = "儲存中...";
+
+      // 優先抓取 Telegram Web App 傳入的使用者 ID
+      const telegramUserId = tg?.initDataUnsafe?.user?.id?.toString() || "123456";
+
+      const payload = {
+        user_id: telegramUserId,
+        name: document.getElementById("name").value.trim(),
+        dose_note: document.getElementById("dose_note").value.trim(),
+        schedules: [
+          {
+            time_of_day: document.getElementById("time_of_day").value,
+            meal_relation: document.getElementById("meal_relation").value,
+            days_of_week: "1,2,3,4,5,6,7"
+          }
+        ]
+      };
+
+      try {
+        const response = await fetch(`${WORKER_URL}/api/medications`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          if (tg) {
+            tg.showAlert("✅ 藥物提醒設定成功！", () => {
+              tg.close(); // 成功後關閉 Mini App 視窗回到對話框
+            });
+          } else {
+            alert("✅ 藥物提醒設定成功！");
+          }
+        } else {
+          const errData = await response.json();
+          alert("儲存失敗：" + (errData.error || "伺服器錯誤"));
+        }
+      } catch (err) {
+        alert("連線失敗，請檢查網路狀態：" + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "儲存提醒設定";
+      }
+    });
+  </script>
+</body>
+</html>
