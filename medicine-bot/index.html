@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>服藥提醒設定</title>
+  <title>服藥提醒管理</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
@@ -13,6 +13,7 @@
       --hint-color: var(--tg-theme-hint-color, #8e8e93);
       --btn-color: var(--tg-theme-button-color, #007aff);
       --btn-text: var(--tg-theme-button-text-color, #ffffff);
+      --danger-color: #ff3b30;
     }
 
     body {
@@ -24,137 +25,210 @@
       box-sizing: border-box;
     }
 
+    /* 頁籤切換樣式 */
+    .tabs {
+      display: flex;
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: none;
+      padding: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--hint-color);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: var(--btn-color);
+      color: var(--btn-text);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     .card {
       background: var(--card-bg);
       border-radius: 12px;
-      padding: 18px;
+      padding: 16px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     }
 
-    h2 {
-      margin-top: 0;
-      font-size: 20px;
-      color: var(--text-color);
+    .med-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+    .med-info h3 { margin: 0 0 4px 0; font-size: 16px; }
+    .med-info p { margin: 0; font-size: 13px; color: var(--hint-color); }
+    .med-time { font-weight: bold; color: var(--btn-color); font-size: 16px; margin-top: 4px; }
 
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    label {
-      display: block;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: var(--text-color);
-    }
-
-    input[type="text"], input[type="time"], select {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid rgba(0,0,0,0.1);
-      border-radius: 8px;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      font-size: 16px;
-      box-sizing: border-box;
-      outline: none;
-    }
-
-    input:focus, select:focus {
-      border-color: var(--btn-color);
-    }
-
-    .btn-submit {
-      width: 100%;
-      background-color: var(--btn-color);
-      color: var(--btn-text);
+    .actions { display: flex; gap: 8px; }
+    .btn-danger {
+      background-color: var(--danger-color);
+      color: white;
       border: none;
-      padding: 14px;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
+      padding: 6px 12px;
+      border-radius: 6px;
       cursor: pointer;
-      margin-top: 10px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      font-size: 13px;
     }
 
-    .btn-submit:disabled {
-      opacity: 0.6;
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    input[type="text"], input[type="time"], select {
+      width: 100%; padding: 10px; border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px; background-color: var(--bg-color); color: var(--text-color);
+      font-size: 16px; box-sizing: border-box; outline: none;
     }
-
-    .tip {
-      font-size: 12px;
-      color: var(--hint-color);
-      margin-top: 4px;
+    .btn-submit {
+      width: 100%; background-color: var(--btn-color); color: var(--btn-text);
+      border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <h2>💊 新增服藥提醒</h2>
-    <form id="medForm">
-      <div class="form-group">
-        <label for="name">藥物名稱</label>
-        <input type="text" id="name" placeholder="例如：降血壓藥" required>
-      </div>
+  <!-- 頁籤導覽 -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('list')">💊 現有藥物</button>
+    <button class="tab-btn" onclick="switchTab('add')">➕ 新增提醒</button>
+  </div>
 
-      <div class="form-group">
-        <label for="dose_note">用量 / 備註</label>
-        <input type="text" id="dose_note" placeholder="例如：1 顆、飯後吃">
-      </div>
+  <!-- 頁籤 1：藥物清單 -->
+  <div id="tab-list" class="tab-content active">
+    <div id="medListLoading" style="text-align: center; color: var(--hint-color); padding: 20px;">載入中...</div>
+    <div id="medListContainer"></div>
+  </div>
 
-      <div class="form-group">
-        <label for="time_of_day">提醒時間</label>
-        <input type="time" id="time_of_day" required value="08:00">
-      </div>
-
-      <div class="form-group">
-        <label for="meal_relation">餐前 / 餐後</label>
-        <select id="meal_relation">
-          <option value="none">無特殊限制</option>
-          <option value="before">飯前</option>
-          <option value="after">飯後</option>
-        </select>
-      </div>
-
-      <button type="submit" id="submitBtn" class="btn-submit">儲存提醒設定</button>
-    </form>
+  <!-- 頁籤 2：新增藥物 -->
+  <div id="tab-add" class="tab-content">
+    <div class="card">
+      <form id="medForm">
+        <div class="form-group">
+          <label>藥物名稱</label>
+          <input type="text" id="name" placeholder="例如：降血壓藥" required>
+        </div>
+        <div class="form-group">
+          <label>用量 / 備註</label>
+          <input type="text" id="dose_note" placeholder="例如：1 顆、飯後吃">
+        </div>
+        <div class="form-group">
+          <label>提醒時間</label>
+          <input type="time" id="time_of_day" required value="08:00">
+        </div>
+        <div class="form-group">
+          <label>餐前 / 餐後</label>
+          <select id="meal_relation">
+            <option value="none">無特殊限制</option>
+            <option value="before">飯前</option>
+            <option value="after">飯後</option>
+          </select>
+        </div>
+        <button type="submit" id="submitBtn" class="btn-submit">儲存提醒設定</button>
+      </form>
+    </div>
   </div>
 
   <script>
     const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand(); // 自動在手機上擴展開至全螢幕
+    if (tg) { tg.ready(); tg.expand(); }
+
+    const WORKER_URL = "https://medication-reminder-bot.ivy2270.workers.dev";
+    const telegramUserId = tg?.initDataUnsafe?.user?.id?.toString() || "123456";
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+      if (tabName === 'list') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('tab-list').classList.add('active');
+        loadMedications();
+      } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('tab-add').classList.add('active');
+      }
     }
 
-    // ⚠️ 請填寫你 Cloudflare Worker 的線上網址
-    const WORKER_URL = "https://medication-reminder-bot.ivy2270.workers.dev";
+    // 載入藥物清單
+    async function loadMedications() {
+      const container = document.getElementById("medListContainer");
+      const loading = document.getElementById("medListLoading");
+      loading.style.display = "block";
+      container.innerHTML = "";
 
+      try {
+        const res = await fetch(`${WORKER_URL}/api/medications?user_id=${telegramUserId}`);
+        const data = await res.json();
+        loading.style.display = "none";
+
+        if (!data.medications || data.medications.length === 0) {
+          container.innerHTML = `<div style="text-align:center; color: var(--hint-color); padding: 30px;">目前沒有設定任何藥物提醒 ☕</div>`;
+          return;
+        }
+
+        data.medications.forEach(item => {
+          const mealText = item.meal_relation === "before" ? " (飯前)" : item.meal_relation === "after" ? " (飯後)" : "";
+          const card = document.createElement("div");
+          card.className = "card med-item";
+          card.innerHTML = `
+            <div class="med-info">
+              <h3>${item.name}</h3>
+              <p>${item.dose_note || "無備註"}</p>
+              <div class="med-time">⏰ ${item.time_of_day || "--:--"}${mealText}</div>
+            </div>
+            <div class="actions">
+              <button class="btn-danger" onclick="deleteMed(${item.medication_id})">刪除</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        loading.innerText = "載入失敗，請檢查網路連線。";
+      }
+    }
+
+    // 刪除藥物
+    async function deleteMed(medId) {
+      if (!confirm("確定要刪除這項藥物提醒嗎？")) return;
+
+      try {
+        const res = await fetch(`${WORKER_URL}/api/medications/delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ medication_id: medId })
+        });
+        if (res.ok) {
+          if (tg) tg.showAlert("✅ 刪除成功！");
+          loadMedications(); // 重新整理清單
+        }
+      } catch (err) {
+        alert("刪除失敗：" + err.message);
+      }
+    }
+
+    // 新增藥物表單監聽
     document.getElementById("medForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const submitBtn = document.getElementById("submitBtn");
       submitBtn.disabled = true;
-      submitBtn.innerText = "儲存中...";
-
-      // 優先抓取 Telegram Web App 傳入的使用者 ID
-      const telegramUserId = tg?.initDataUnsafe?.user?.id?.toString() || "123456";
 
       const payload = {
         user_id: telegramUserId,
         name: document.getElementById("name").value.trim(),
         dose_note: document.getElementById("dose_note").value.trim(),
-        schedules: [
-          {
-            time_of_day: document.getElementById("time_of_day").value,
-            meal_relation: document.getElementById("meal_relation").value,
-            days_of_week: "1,2,3,4,5,6,7"
-          }
-        ]
+        schedules: [{
+          time_of_day: document.getElementById("time_of_day").value,
+          meal_relation: document.getElementById("meal_relation").value,
+          days_of_week: "1,2,3,4,5,6,7"
+        }]
       };
 
       try {
@@ -165,24 +239,19 @@
         });
 
         if (response.ok) {
-          if (tg) {
-            tg.showAlert("✅ 藥物提醒設定成功！", () => {
-              tg.close(); // 成功後關閉 Mini App 視窗回到對話框
-            });
-          } else {
-            alert("✅ 藥物提醒設定成功！");
-          }
-        } else {
-          const errData = await response.json();
-          alert("儲存失敗：" + (errData.error || "伺服器錯誤"));
+          alert("✅ 藥物新增成功！");
+          document.getElementById("medForm").reset();
+          switchTab('list'); // 自動切換回清單頁
         }
       } catch (err) {
-        alert("連線失敗，請檢查網路狀態：" + err.message);
+        alert("連線失敗：" + err.message);
       } finally {
         submitBtn.disabled = false;
-        submitBtn.innerText = "儲存提醒設定";
       }
     });
+
+    // 頁面初始化預設載入清單
+    loadMedications();
   </script>
 </body>
 </html>
