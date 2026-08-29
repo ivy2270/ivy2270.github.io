@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>書本閱讀器</title>
+    <style>
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: #1a1a1a; 
+            position: relative; 
+        }
+
+        #ebook-viewer { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+            display: block;
+        }
+
+        /* 返回地圖按鈕（固定於右下角） */
+        .back-to-map-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            background:#a9a9a9;
+            color: #ffffff;
+            padding: 8px 18px;
+            text-decoration: none;
+            border-radius: 20px;
+            font-family: sans-serif;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            transition: background 0.2s, transform 0.1s;
+            backdrop-filter: blur(4px);
+        }
+
+        .back-to-map-btn:hover { 
+            background: #696969; 
+        }
+
+        .back-to-map-btn:active { 
+            transform: scale(0.95); 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 電子書框架 -->
+    <iframe id="ebook-viewer" src=""></iframe>
+
+    <!-- 右下角返回地圖按鈕 -->
+    <a href="index.html" class="back-to-map-btn">‹ 返回地圖</a>
+
+    <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetChapter = urlParams.get('chap') || 'chapter1';
+    const bookName = '遠行.epub';
+    const iframe = document.getElementById('ebook-viewer');
+
+    // 章節與 Bibi p 參數 (Spine Index) 對應表
+    const CHAPTER_SPINE_MAP = {
+        'chapter1': '1',
+        'chapter2': '2',
+        'chapter3': '3'
+    };
+
+    const spinePath = CHAPTER_SPINE_MAP[targetChapter];
+
+    // 💡 加上 Bibi 原生參數：鎖定預設為 paged (頁面模式) + spread (雙頁對開)
+    const bibiParams = [
+        `book=${bookName}`,
+        `p=${spinePath || 1}`,
+        `paged=spread`,   /* 預設維持對開分頁 */
+        `autostart=yes`
+    ].join('&');
+
+    iframe.src = `Bibi-v1.2.0/bibi/index.html?${bibiParams}`;
+    </script>
+</body>
+</html>
