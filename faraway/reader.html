@@ -21,33 +21,6 @@
             border: none; 
             display: block;
         }
-
-        /* 返回地圖按鈕（固定於右下角） */
-        .back-to-map-btn {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-            background:#a9a9a9;
-            color: #ffffff;
-            padding: 8px 18px;
-            text-decoration: none;
-            border-radius: 20px;
-            font-family: sans-serif;
-            font-size: 13px;
-            font-weight: bold;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-            transition: background 0.2s, transform 0.1s;
-            backdrop-filter: blur(4px);
-        }
-
-        .back-to-map-btn:hover { 
-            background: #696969; 
-        }
-
-        .back-to-map-btn:active { 
-            transform: scale(0.95); 
-        }
     </style>
 </head>
 <body>
@@ -55,16 +28,12 @@
     <!-- 電子書框架 -->
     <iframe id="ebook-viewer" src=""></iframe>
 
-    <!-- 右下角返回地圖按鈕 -->
-    <a href="index.html" class="back-to-map-btn">‹ 返回地圖</a>
-
     <script>
     const urlParams = new URLSearchParams(window.location.search);
     const targetChapter = urlParams.get('chap') || 'chapter1';
     const bookName = '遠行.epub';
     const iframe = document.getElementById('ebook-viewer');
 
-    // 章節與 Bibi p 參數 (Spine Index) 對應表
     const CHAPTER_SPINE_MAP = {
         'chapter1': '1',
         'chapter2': '2',
@@ -73,15 +42,123 @@
 
     const spinePath = CHAPTER_SPINE_MAP[targetChapter];
 
-    // 💡 加上 Bibi 原生參數：鎖定預設為 paged (頁面模式) + spread (雙頁對開)
     const bibiParams = [
         `book=${bookName}`,
         `p=${spinePath || 1}`,
-        `paged=spread`,   /* 預設維持對開分頁 */
+        `paged=spread`,
         `autostart=yes`
     ].join('&');
 
     iframe.src = `Bibi-v1.2.0/bibi/index.html?${bibiParams}`;
+
+    iframe.addEventListener('load', () => {
+        const checkBibiLoaded = setInterval(() => {
+            try {
+                const bibiWin = iframe.contentWindow;
+                const bibiDoc = iframe.contentDocument || bibiWin.document;
+
+                if (bibiWin && bibiDoc.body) {
+                    
+                    if (!bibiDoc.getElementById('custom-back-to-map-overlay')) {
+                        
+                        // 1. 建立外層獨立 Overlay 容器
+                        const overlay = bibiDoc.createElement('div');
+                        overlay.id = 'custom-back-to-map-overlay';
+                        
+                        // 2. 建立按鈕
+                        const backBtn = bibiDoc.createElement('a');
+                        backBtn.id = 'custom-back-to-map';
+                        backBtn.href = '../../index.html';
+                        backBtn.target = '_top';
+                        backBtn.innerText = '‹ 返回地圖';
+
+                        overlay.appendChild(backBtn);
+                        
+                        // 插在 <body> 第一個節點，確保不被 Canvas 蓋住
+                        bibiDoc.body.insertBefore(overlay, bibiDoc.body.firstChild);
+
+                        // 3. 注入高權重 CSS（預設隱藏，叫出選單時才顯現）
+                        const styleEl = bibiDoc.createElement('style');
+                        styleEl.textContent = `
+                            #custom-back-to-map-overlay {
+                                position: fixed !important;
+                                top: 5px !important;
+                                left: 80px !important; /* 錯開左上角原生選單圖示 */
+                                z-index: 2147483647 !important;
+                                pointer-events: none !important; /* 平時不擋住閱讀點擊 */
+                                opacity: 0 !important;
+                                transform: translateY(-8px) !important;
+                                transition: opacity 0.25s ease, transform 0.25s ease !important;
+                            }
+
+                            #custom-back-to-map {
+                                display: inline-block !important;
+                                padding: 6px 14px !important;
+                                background-color: #ffffff !important;
+                                color: rgba(35, 35, 35, 0.55) !important;
+                                font-size: 13px !important;
+                                font-weight: bold !important;
+                                text-decoration: none !important;
+                                border-radius: 2px !important;
+                                border: 1px solid rgba(35, 35, 35, 0.1) !important;                                
+                                cursor: pointer !important;
+                                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;                                
+                            }
+
+                            #custom-back-to-map:hover {
+                                background-color: rgba(35, 35, 35, 0.55) !important;
+                                color:#ffffff !important;
+                            }
+
+                            /* 💡 當 Bibi 選單被點擊喚起時（HTML/Body 掛上 menu 相關 class），顯示按鈕 */
+                            html[class*="-opened"] #custom-back-to-map-overlay,
+                            body[class*="-opened"] #custom-back-to-map-overlay,
+                            html.bibi-menu-opened #custom-back-to-map-overlay,
+                            body.bibi-menu-opened #custom-back-to-map-overlay {
+                                opacity: 1 !important;
+                                transform: translateY(0) !important;
+                                pointer-events: auto !important; /* 顯示時才可點擊 */
+                            }
+                        `;
+                        bibiDoc.head.appendChild(styleEl);
+
+                        // 💡 補強機制：動態監聽 Bibi 選單 DOM 的 class 變化與點擊
+                        const updateState = () => {
+                            const isMenuVisible = bibiDoc.documentElement.className.includes('-opened') || 
+                                                  bibiDoc.body.className.includes('-opened') ||
+                                                  bibiDoc.querySelector('.bibi-menu')?.offsetHeight > 0;
+
+                            if (isMenuVisible) {
+                                overlay.style.setProperty('opacity', '1', 'important');
+                                overlay.style.setProperty('transform', 'translateY(0)', 'important');
+                                overlay.style.setProperty('pointer-events', 'auto', 'important');
+                            } else {
+                                overlay.style.setProperty('opacity', '0', 'important');
+                                overlay.style.setProperty('transform', 'translateY(-8px)', 'important');
+                                overlay.style.setProperty('pointer-events', 'none', 'important');
+                            }
+                        };
+
+                        // 監聽 Class 改變（點擊螢幕中央喚起/關閉工具列時）
+                        const observer = new MutationObserver(updateState);
+                        observer.observe(bibiDoc.documentElement, { attributes: true, attributeFilter: ['class'] });
+                        observer.observe(bibiDoc.body, { attributes: true, attributeFilter: ['class'] });
+
+                        // 點擊事件即時反饋
+                        bibiDoc.addEventListener('click', () => setTimeout(updateState, 100));
+                        
+                        updateState(); // 初始化狀態
+                    }
+
+                    clearInterval(checkBibiLoaded);
+                }
+            } catch (e) {
+                // 等待 Bibi 初始化
+            }
+        }, 200);
+
+        setTimeout(() => clearInterval(checkBibiLoaded), 10000);
+    });
     </script>
 </body>
 </html>
