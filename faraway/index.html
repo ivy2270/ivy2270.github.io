@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <!-- 1. 開放 Viewport 縮放權限 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>無限循環地圖目錄（支援縮放與手機適應版）</title>
+    
+    <!-- 引入 Swiper 的手機滑動樣式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            overflow-x: hidden;
+        }
+
+        .swiper {
+            width: 100%;
+            height: auto;
+            padding: 20px 0;
+        }
+
+        .swiper-slide {
+            width: auto !important; 
+        }
+
+        .map-wrapper {
+            position: relative;
+            display: inline-block; /* 讓容器隨圖片尺寸調整 */
+        }
+
+        /* 桌機版預設：固定 1300px 寬度 */
+        .map-image {
+            display: block;
+            width: 1300px;
+            height: auto;
+            max-width: none;
+        }
+
+        /* 熱點樣式 */
+        .hotspot {
+            position: absolute;
+            /*background-color: rgba(255, 0, 0, 0.3);*/
+			/*測試用，正式改為 rgba(0,0,0,0) */
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .hotspot:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* 熱點位置定義 */
+        .spot-01 { top: 72%; left: 12%; width: 3%; height: 18%; }
+        .spot-23 { top: 72%; left: 16%; width: 2.5%; height: 18%; }
+        .spot-26 { top: 72%; left: 19%; width: 2.7%; height: 18%; }
+
+        /* ==================== 手機 RWD 視覺優化 ==================== */
+        @media (max-width: 768px) {
+            .swiper {
+                padding: 10px 0;
+            }
+            
+            /* 在手機上自動以螢幕高度為基準，確保下半部目錄能完整顯現 */
+            .map-image {
+                width: auto;
+                height: 80vh; /* 圖片高度限制在螢幕的 80% */
+                max-width: none;
+            }
+        }
+
+        /* ==================== Popup 彈窗樣式 ==================== */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(3px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+
+        .popup-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .popup-content {
+            background-color: rgba(20, 20, 20, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #ffffff;
+            padding: 30px;
+            padding-bottom: 70px;
+            position: relative;
+            
+            width: 85vw;
+            max-width: 650px;
+            height: 65vh;
+            max-height: 520px;
+            box-sizing: border-box;
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 12px;
+            right: 15px;
+            color: #ccc;
+            font-size: 26px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            line-height: 1;
+            z-index: 10;
+        }
+
+        .popup-body {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 1.05rem;
+            line-height: 1.85;
+            letter-spacing: 0.08em;
+            color: #e0e0e0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 100%;
+            width: 100%;
+            white-space: pre-wrap;
+        }
+
+        .popup-title {
+            font-size: 1.35rem;
+            font-weight: bold;
+            color: #ffffff;
+            margin-left: 18px;
+            border-left: 2px solid #aaa;
+            padding-left: 8px;
+        }
+
+        .popup-text {
+            padding-left: 10px;
+        }
+
+        .popup-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 25px;
+            padding: 8px 20px;
+            background-color: #ffffff;
+            color: #000000;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 4px;
+            letter-spacing: 0.1em;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            white-space: nowrap;
+            z-index: 5;
+        }
+
+        .popup-btn:hover {
+            background-color: #cccccc;
+        }
+
+        @media (max-width: 600px) {
+            .popup-content {
+                width: 92vw;
+                height: 75vh;
+                padding: 20px;
+                padding-bottom: 65px;
+            }
+            .popup-body {
+                font-size: 0.95rem;
+            }
+            .popup-btn {
+                bottom: 15px;
+                left: 15px;
+                padding: 6px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Swiper 主容器 -->
+    <div class="swiper mySwiper">
+        <div class="swiper-wrapper">
+            
+            <!-- Slide 1（加入 swiper-zoom-container 允許圖片與熱點一起放大） -->
+            <div class="swiper-slide">
+                <div class="swiper-zoom-container">
+                    <div class="map-wrapper">
+                        <img src="bg.jpg" alt="世界地圖目錄" class="map-image">
+                        <a href="javascript:void(0)" class="hotspot spot-01" data-id="spot-01" title="引子"></a>
+                        <a href="javascript:void(0)" class="hotspot spot-23" data-id="spot-23" title="點水"></a>
+                        <a href="javascript:void(0)" class="hotspot spot-26" data-id="spot-26" title="六月三十日"></a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2 -->
+            <div class="swiper-slide">
+                <div class="swiper-zoom-container">
+                    <div class="map-wrapper">
+                        <img src="bg.jpg" alt="世界地圖目錄" class="map-image">
+                        <a href="javascript:void(0)" class="hotspot spot-01" data-id="spot-01" title="引子"></a>
+                        <a href="javascript:void(0)" class="hotspot spot-23" data-id="spot-23" title="點水"></a>
+                        <a href="javascript:void(0)" class="hotspot spot-26" data-id="spot-26" title="六月三十日"></a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 3 -->
+            <div class="swiper-slide">
+                <div class="swiper-zoom-container">
+                    <div class="map-wrapper">
+                        <img src="bg.jpg" alt="世界地圖目錄" class="map-image">
+                        <a href="javascript:void(0)" class="hotspot spot-01" data-id="spot-01" title="引子"></a>
+                        <a href="javascript:void(0)" class="hotspot spot-23" data-id="spot-23" title="點水"></a>
+                        <a href="javascript:void(0)" class="hotspot spot-26" data-id="spot-26" title="六月三十日"></a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Popup 彈窗元件 -->
+    <div class="popup-overlay" id="popupOverlay">
+        <div class="popup-content">
+            <button class="popup-close" id="popupClose">&times;</button>
+            <div class="popup-body">
+                <div class="popup-title" id="popupTitle">章節名稱</div>
+                <div class="popup-text" id="popupSummary">摘要內容載入中...</div>
+            </div>
+            <a href="#" class="popup-btn" id="popupReadBtn">閱讀更多</a>
+        </div>
+    </div>
+
+    <!-- 引入 Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+    <script>
+    // 1. 初始化 Swiper（開啟 zoom 功能）
+    var swiper = new Swiper(".mySwiper", {
+        direction: "horizontal",
+        slidesPerView: "auto",
+        centeredSlides: false,
+        loop: true,
+        loopedSlides: 2,
+        grabCursor: true,
+        
+        // 💡 關鍵設定：啟用雙指縮放功能
+        zoom: {
+            maxRatio: 3,         /* 最大可放大至 3 倍 */
+            minRatio: 1,         /* 最小倍率 */
+            toggle: false        /* 關閉雙擊放大，避免干擾熱點點擊 */
+        },
+
+        freeMode: {
+            enabled: true,
+            momentum: false,
+        },
+        mousewheel: {
+            forceToAxis: true,
+            sensitivity: 1,
+        },
+        touchRatio: 1,
+        resistanceRatio: 0,
+        on: {
+            init: function () {
+                setTimeout(() => {
+                    this.slideToLoop(0, 0, false);
+                }, 50);
+            }
+        }
+    });
+
+    // 2. 儲存 JSON 資料
+    let hotspotData = {};
+
+    fetch('data.json')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(item => {
+                hotspotData[item.id] = item;
+            });
+        })
+        .catch(error => console.error('載入 JSON 失敗:', error));
+
+    // 3. Popup 彈窗邏輯
+    const popupOverlay = document.getElementById('popupOverlay');
+    const popupTitle = document.getElementById('popupTitle');
+    const popupSummary = document.getElementById('popupSummary');
+    const popupReadBtn = document.getElementById('popupReadBtn');
+    const popupClose = document.getElementById('popupClose');
+
+    function openPopup(spotId) {
+        const item = hotspotData[spotId];
+        if (!item) return;
+
+        popupTitle.textContent = item.title;
+        popupSummary.textContent = item.summary;
+        popupReadBtn.href = item.link;
+        popupOverlay.classList.add('active');
+        
+        document.querySelector('.popup-body').scrollLeft = 0;
+    }
+
+    function closePopup() {
+        popupOverlay.classList.remove('active');
+    }
+
+    // 事件委派：監聽熱點點擊
+    document.addEventListener('click', function (e) {
+        const hotspot = e.target.closest('.hotspot');
+        if (hotspot) {
+            e.preventDefault();
+            const spotId = hotspot.getAttribute('data-id');
+            openPopup(spotId);
+        }
+    });
+
+    popupClose.addEventListener('click', closePopup);
+    popupOverlay.addEventListener('click', function (e) {
+        if (e.target === popupOverlay) closePopup();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && popupOverlay.classList.contains('active')) {
+            closePopup();
+        }
+    });
+    </script>
+</body>
+</html>
