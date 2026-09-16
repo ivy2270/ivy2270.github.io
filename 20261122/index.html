@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>2026教師團內部售票登記</title>
+<link href="https://font.emtech.cc/css/ChironSungHK" rel="stylesheet" />
+<style>
+  :root {
+    --color-primary: #baa483;
+    --color-secondary: #ae9f80;
+    --color-primary-dark: #8f7c5e;
+    --color-bg: #faf7f2;
+    --color-card: #ffffff;
+    --color-text: #3a332a;
+    --color-text-soft: #6b6154;
+    --color-border: #e2d9c8;
+    --color-danger: #b3554a;
+    --color-success: #4c7a5a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'ChironSungHK', 'Noto Sans TC', sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 18px;
+    line-height: 1.6;
+    padding-bottom: 40px;
+  }
+
+  header.page-header {
+    background: var(--color-primary);
+    color: #fff;
+    padding: 20px 16px;
+    text-align: center;
+  }
+
+  header.page-header h1 {
+    margin: 0;
+    font-size: 1.5em;
+    font-weight: 700;
+  }
+
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 6px;
+    margin-top: 18px;
+  }
+  label:first-of-type { margin-top: 0; }
+
+  .field-hint {
+    font-size: 0.8em;
+    color: var(--color-text-soft);
+    font-weight: 400;
+    display: block;
+    margin-top: 2px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  input[type="search"] {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 1em;
+    font-family: inherit;
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--color-text);
+  }
+
+  input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 1.05em;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 20px;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .btn-primary {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .btn-primary:active { background: var(--color-primary-dark); }
+
+  .btn-secondary {
+    background: #fff;
+    color: var(--color-primary-dark);
+    border: 2px solid var(--color-primary);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .btn-row button { flex: 1; }
+
+  .error-msg {
+    color: var(--color-danger);
+    font-weight: 700;
+    margin-top: 14px;
+    display: none;
+  }
+
+  .success-msg {
+    text-align: center;
+    padding: 30px 10px;
+  }
+  .success-msg .big-check {
+    font-size: 3em;
+    color: var(--color-success);
+  }
+
+  /* 確認彈窗 */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(58, 51, 42, 0.5);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal-box {
+    background: #fff;
+    width: 100%;
+    max-width: 640px;
+    border-radius: 16px 16px 0 0;
+    padding: 24px 20px 30px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .modal-box h2 {
+    margin-top: 0;
+    font-size: 1.3em;
+    color: var(--color-primary-dark);
+  }
+
+  .confirm-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .confirm-row.total {
+    font-weight: 700;
+    font-size: 1.2em;
+    border-bottom: none;
+    margin-top: 8px;
+    color: var(--color-primary-dark);
+  }
+
+  /* 後台專用樣式 */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .summary-item {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .summary-item .label {
+    font-size: 0.8em;
+    color: var(--color-text-soft);
+  }
+  .summary-item .value {
+    font-size: 1.4em;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+  }
+  .summary-item.wide { grid-column: 1 / -1; }
+  .summary-item.total .value { color: var(--color-danger); }
+
+  .search-box { margin-bottom: 16px; }
+
+  .reg-item {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .reg-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+  }
+  .reg-table th {
+    text-align: left;
+    vertical-align: top;
+    color: var(--color-text-soft);
+    font-weight: 700;
+    padding: 3px 10px 3px 0;
+    width: 58px;
+    white-space: nowrap;
+  }
+  .reg-table td {
+    padding: 3px 0;
+  }
+  .reg-table td.amount-cell {
+    font-weight: 700;
+    color: var(--color-primary-dark);
+  }
+  .reg-item .checks {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--color-border);
+  }
+
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 6px;
+    font-size: 0.85em;
+    font-weight: 700;
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--color-text-soft);
+    cursor: pointer;
+  }
+  .filter-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+
+  .group-card {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .group-card summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-bg);
+  }
+  .group-card summary::-webkit-details-marker { display: none; }
+  .group-card summary::after {
+    content: "▸";
+    color: var(--color-text-soft);
+    transition: transform 0.15s;
+    margin-left: auto;
+  }
+  .group-card[open] summary::after { transform: rotate(90deg); }
+  .group-name {
+    font-weight: 700;
+    font-size: 1.05em;
+  }
+  .group-meta {
+    color: var(--color-text-soft);
+    font-size: 0.8em;
+    white-space: nowrap;
+  }
+  .group-amount {
+    font-weight: 700;
+    color: var(--color-primary-dark);
+    white-space: nowrap;
+  }
+  .group-entries {
+    padding: 10px 14px 14px;
+  }
+  .group-entries .reg-item {
+    margin-bottom: 8px;
+  }
+  .group-entries .reg-item:last-child {
+    margin-bottom: 0;
+  }
+  .checks label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 400;
+    margin: 0;
+    font-size: 0.95em;
+  }
+  .checks input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+
+  .loading, .empty-msg {
+    text-align: center;
+    color: var(--color-text-soft);
+    padding: 20px;
+  }
+
+  .pw-gate {
+    text-align: center;
+    padding-top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1 id="pageTitle">2026教師團內部售票登記</h1>
+</header>
+
+<div class="container" id="app"></div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <h2>請確認登記資訊</h2>
+    <div id="confirmDetails"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="cancelBtn">返回修改</button>
+      <button class="btn-primary" id="confirmSubmitBtn">確認送出</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 請於部署後填入你的 GAS Web App 網址 =====
+const GAS_URL = "https://script.google.com/macros/s/AKfycbw5SS2UIEPT8nGxwLAazYR1kbCfz2olG95p8qCL9c6mq1JGcl8xh2z-IpCT6Y2Um4bL/exec";
+
+// ===== 票價設定（需與後端一致，僅用於前台顯示與確認畫面計算）=====
+const PRICE_500 = 400;
+const PRICE_300 = 300;
+const PRICE_SENIOR_500 = 250;
+const PRICE_SENIOR_300 = 150;
+
+// ========== 請求層：POST 優先用 fetch，失敗或 file:// 時自動改用 JSONP ==========
+
+function jsonpRequest(action, params) {
+  return new Promise((resolve, reject) => {
+    const cbName = "cb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+    const query = new URLSearchParams({ action, callback: cbName, ...params });
+    const script = document.createElement("script");
+    script.src = GAS_URL + "?" + query.toString();
+
+    const cleanup = () => {
+      delete window[cbName];
+      script.remove();
+    };
+    window[cbName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("JSONP 請求失敗"));
+    };
+    document.body.appendChild(script);
+  });
+}
+
+async function apiRequest(action, params = {}) {
+  const isFileProtocol = location.protocol === "file:";
+  if (!isFileProtocol) {
+    try {
+      const body = new URLSearchParams({ action, ...params });
+      const res = await fetch(GAS_URL, { method: "POST", body });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return await res.json();
+    } catch (err) {
+      console.warn("fetch 失敗，改用 JSONP 重試：", err);
+    }
+  }
+  return jsonpRequest(action, params);
+}
+
+// getAdminData 一律用 JSONP（GET 讀取，兩種環境都適用）
+function getAdminData(params) {
+  return jsonpRequest("getAdminData", params);
+}
+
+// ========== 路由：依網址參數決定顯示表單或後台 ==========
+
+const urlParams = new URLSearchParams(location.search);
+const isAdmin = urlParams.get("admin") === "1";
+
+if (isAdmin) {
+  document.getElementById("pageTitle").textContent = "售票登記後台管理";
+  renderAdminGate();
+} else {
+  renderForm();
+}
+
+// ================= 前台：報名表單 =================
+
+function renderForm() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="card">
+      <label>您的姓名
+        <input type="text" id="fName" />
+      </label>
+
+      <label>500元票（打八折後票價400元）需要幾張？
+        <span class="field-hint">不需要請寫 0</span>
+        <input type="number" id="fCount500" inputmode="numeric" min="0" step="1" value="0" />
+      </label>
+
+      <label>300元票（不打折）需要幾張？
+        <span class="field-hint">不需要請寫 0</span>
+        <input type="number" id="fCount300" inputmode="numeric" min="0" step="1" value="0" />
+      </label>
+
+      <label>敬老票（500元打五折後票價250元）需要幾張？
+        <span class="field-hint">沒有請寫 0</span>
+        <input type="number" id="fCountSenior500" inputmode="numeric" min="0" step="1" value="0" />
+      </label>
+
+      <label>敬老票（300元打五折後票價150元）需要幾張？
+        <span class="field-hint">沒有請寫 0</span>
+        <input type="number" id="fCountSenior300" inputmode="numeric" min="0" step="1" value="0" />
+      </label>
+
+      <label>備註
+        <span class="field-hint">選填</span>
+        <input type="text" id="fNote" />
+      </label>
+
+      <div class="error-msg" id="formError"></div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="reviewBtn">確認登記資訊</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("reviewBtn").addEventListener("click", onReview);
+}
+
+function readFormValues() {
+  const name = document.getElementById("fName").value.trim();
+  const note = document.getElementById("fNote").value.trim();
+  const rawFields = {
+    count500: document.getElementById("fCount500").value,
+    count300: document.getElementById("fCount300").value,
+    countSenior500: document.getElementById("fCountSenior500").value,
+    countSenior300: document.getElementById("fCountSenior300").value
+  };
+
+  const errors = [];
+  if (!name) errors.push("請填寫姓名");
+
+  const counts = {};
+  for (const key in rawFields) {
+    const raw = rawFields[key].trim();
+    if (raw === "" || !/^\d+$/.test(raw)) {
+      errors.push("票數請填寫整數（沒有請填 0）");
+      break;
+    }
+    counts[key] = parseInt(raw, 10);
+  }
+
+  const totalCount = (counts.count500 || 0) + (counts.count300 || 0) +
+    (counts.countSenior500 || 0) + (counts.countSenior300 || 0);
+  if (errors.length === 0 && totalCount <= 0) {
+    errors.push("請至少登記一張票");
+  }
+
+  return { name, counts, note, errors };
+}
+
+function onReview() {
+  const errEl = document.getElementById("formError");
+  const { name, counts, note, errors } = readFormValues();
+
+  if (errors.length > 0) {
+    errEl.textContent = errors[0];
+    errEl.style.display = "block";
+    return;
+  }
+  errEl.style.display = "none";
+
+  const totalAmount = counts.count500 * PRICE_500 + counts.count300 * PRICE_300 +
+    counts.countSenior500 * PRICE_SENIOR_500 + counts.countSenior300 * PRICE_SENIOR_300;
+
+  const rows = [];
+  rows.push(["姓名", name]);
+  if (counts.count500 > 0) rows.push(["500元票（$400/張）", counts.count500 + " 張"]);
+  if (counts.count300 > 0) rows.push(["300元票（$300/張）", counts.count300 + " 張"]);
+  if (counts.countSenior500 > 0) rows.push(["敬老500元票（$250/張）", counts.countSenior500 + " 張"]);
+  if (counts.countSenior300 > 0) rows.push(["敬老300元票（$150/張）", counts.countSenior300 + " 張"]);
+  if (note) rows.push(["備註", note]);
+
+  const detailsEl = document.getElementById("confirmDetails");
+  detailsEl.innerHTML =
+    rows.map(([k, v]) => `<div class="confirm-row"><span>${escapeHtml(k)}</span><span>${escapeHtml(v)}</span></div>`).join("") +
+    `<div class="confirm-row total"><span>應付總金額</span><span>NT$ ${totalAmount}</span></div>`;
+
+  document.getElementById("confirmModal").classList.add("open");
+
+  const submitBtn = document.getElementById("confirmSubmitBtn");
+  submitBtn.disabled = false;
+  submitBtn.textContent = "確認送出";
+  submitBtn.onclick = () => onConfirmSubmit(name, counts, note);
+}
+
+document.getElementById("cancelBtn").addEventListener("click", () => {
+  document.getElementById("confirmModal").classList.remove("open");
+});
+
+async function onConfirmSubmit(name, counts, note) {
+  const submitBtn = document.getElementById("confirmSubmitBtn");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "送出中...";
+
+  try {
+    const result = await apiRequest("submitForm", {
+      name,
+      count500: counts.count500,
+      count300: counts.count300,
+      countSenior500: counts.countSenior500,
+      countSenior300: counts.countSenior300,
+      note: note || ""
+    });
+
+    if (result.status === "success") {
+      document.getElementById("confirmModal").classList.remove("open");
+      renderSuccess(result);
+    } else {
+      alert(result.message || "登記失敗，請稍後再試");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "確認送出";
+    }
+  } catch (err) {
+    alert("送出失敗：" + err.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = "確認送出";
+  }
+}
+
+function renderSuccess(result) {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="card success-msg">
+      <div class="big-check">✓</div>
+      <h2>登記完成</h2>
+      <p>${escapeHtml(result.name)} 您好，已收到您的登記。</p>
+      <p>應付總金額：<strong>NT$ ${result.totalAmount}</strong></p>
+      <div class="btn-row">
+        <button class="btn-primary" id="backBtn">再登記一筆</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("backBtn").addEventListener("click", renderForm);
+}
+
+// ================= 後台：密碼輸入頁 =================
+
+let adminPassword = "";
+
+function renderAdminGate() {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="card pw-gate">
+      <label>請輸入管理員密碼
+        <input type="text" id="adminPw" />
+      </label>
+      <div class="error-msg" id="gateError"></div>
+      <div class="btn-row">
+        <button class="btn-primary" id="gateBtn">登入後台</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("gateBtn").addEventListener("click", onGateSubmit);
+  document.getElementById("adminPw").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") onGateSubmit();
+  });
+}
+
+let allRegistrations = [];
+
+async function onGateSubmit() {
+  const pw = document.getElementById("adminPw").value;
+  const errEl = document.getElementById("gateError");
+  errEl.style.display = "none";
+
+  const app = document.getElementById("app");
+  app.innerHTML = `<div class="loading">載入中...</div>`;
+
+  try {
+    const result = await getAdminData({ pw });
+    if (result.status === "success") {
+      adminPassword = pw;
+      allRegistrations = result.list;
+      renderAdminDashboard(result.list);
+    } else {
+      renderAdminGate();
+      document.getElementById("gateError").textContent = result.message || "密碼錯誤";
+      document.getElementById("gateError").style.display = "block";
+    }
+  } catch (err) {
+    renderAdminGate();
+    document.getElementById("gateError").textContent = "載入失敗：" + err.message;
+    document.getElementById("gateError").style.display = "block";
+  }
+}
+
+// ================= 後台：儀表板 =================
+
+function computeSummary(list) {
+  const s = { count500: 0, count300: 0, countSenior500: 0, countSenior300: 0, totalTickets: 0, totalAmount: 0 };
+  for (const item of list) {
+    s.count500 += item.count500;
+    s.count300 += item.count300;
+    s.countSenior500 += item.countSenior500;
+    s.countSenior300 += item.countSenior300;
+    s.totalTickets += item.count500 + item.count300 + item.countSenior500 + item.countSenior300;
+    s.totalAmount += item.totalAmount;
+  }
+  return s;
+}
+
+let currentSearch = "";
+let currentStatusFilter = "all"; // all | unpaid | unpicked
+let currentSortMode = "time"; // time | amount
+
+function renderAdminDashboard(list) {
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="card">
+      <div class="summary-grid" id="summaryGrid"></div>
+    </div>
+    <div class="card">
+      <div class="filter-bar" id="statusFilterBar">
+        <button class="filter-btn active" data-filter="all">全部</button>
+        <button class="filter-btn" data-filter="unpaid">未付款</button>
+        <button class="filter-btn" data-filter="unpicked">未取票</button>
+      </div>
+      <div class="filter-bar" id="sortBar">
+        <button class="filter-btn active" data-sort="time">依登記時間</button>
+        <button class="filter-btn" data-sort="amount">依加總金額（同人合併）</button>
+      </div>
+      <div class="search-box">
+        <input type="search" id="searchInput" placeholder="搜尋姓名..." />
+      </div>
+      <div id="regList"></div>
+    </div>
+  `;
+
+  document.getElementById("searchInput").addEventListener("input", (e) => {
+    currentSearch = e.target.value.trim();
+    renderFilteredList();
+  });
+
+  document.querySelectorAll("#statusFilterBar .filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#statusFilterBar .filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentStatusFilter = btn.dataset.filter;
+      renderFilteredList();
+    });
+  });
+
+  document.querySelectorAll("#sortBar .filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#sortBar .filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentSortMode = btn.dataset.sort;
+      renderFilteredList();
+    });
+  });
+
+  renderFilteredList();
+}
+
+function renderSummary(summary) {
+  const grid = document.getElementById("summaryGrid");
+  grid.innerHTML = `
+    <div class="summary-item"><div class="label">500元票（已折）</div><div class="value">${summary.count500}</div></div>
+    <div class="summary-item"><div class="label">300元票</div><div class="value">${summary.count300}</div></div>
+    <div class="summary-item"><div class="label">敬老500元票</div><div class="value">${summary.countSenior500}</div></div>
+    <div class="summary-item"><div class="label">敬老300元票</div><div class="value">${summary.countSenior300}</div></div>
+    <div class="summary-item wide"><div class="label">登記總張數</div><div class="value">${summary.totalTickets}</div></div>
+    <div class="summary-item wide total"><div class="label">應收總金額</div><div class="value">NT$ ${summary.totalAmount}</div></div>
+  `;
+}
+
+function renderFilteredList() {
+  let filtered = currentSearch
+    ? allRegistrations.filter(item => item.name.includes(currentSearch))
+    : allRegistrations.slice();
+
+  if (currentStatusFilter === "unpaid") {
+    filtered = filtered.filter(item => !item.paid);
+  } else if (currentStatusFilter === "unpicked") {
+    filtered = filtered.filter(item => !item.pickedUp);
+  }
+
+  renderSummary(computeSummary(filtered));
+
+  const listEl = document.getElementById("regList");
+  if (filtered.length === 0) {
+    listEl.innerHTML = `<div class="empty-msg">沒有符合的登記資料</div>`;
+    return;
+  }
+
+  if (currentSortMode === "amount") {
+    renderGroupedList(filtered);
+  } else {
+    // currentSortMode === "time"：沿用後端回傳的登記時間新到舊排序
+    renderFlatList(filtered);
+  }
+}
+
+function renderFlatList(filtered) {
+  const listEl = document.getElementById("regList");
+  listEl.innerHTML = filtered.map(item => renderRegItemHtml(item)).join("");
+  attachCheckboxListeners(listEl);
+}
+
+// 依姓名合併登記筆數，依合併後總金額高到低排序；每人可展開查看個別登記明細
+function groupByName(filtered) {
+  const map = new Map();
+  for (const item of filtered) {
+    if (!map.has(item.name)) {
+      map.set(item.name, { name: item.name, totalAmount: 0, totalTickets: 0, entries: [] });
+    }
+    const g = map.get(item.name);
+    g.totalAmount += item.totalAmount;
+    g.totalTickets += item.count500 + item.count300 + item.countSenior500 + item.countSenior300;
+    g.entries.push(item);
+  }
+  return Array.from(map.values()).sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
+function renderGroupedList(filtered) {
+  const listEl = document.getElementById("regList");
+  const groups = groupByName(filtered);
+
+  listEl.innerHTML = groups.map(g => {
+    const entriesHtml = g.entries.map(item => renderRegItemHtml(item)).join("");
+    return `
+      <details class="group-card">
+        <summary>
+          <span class="group-name">${escapeHtml(g.name)}</span>
+          <span class="group-meta">共 ${g.entries.length} 筆・${g.totalTickets} 張</span>
+          <span class="group-amount">NT$ ${g.totalAmount}</span>
+        </summary>
+        <div class="group-entries">${entriesHtml}</div>
+      </details>
+    `;
+  }).join("");
+
+  attachCheckboxListeners(listEl);
+}
+
+// 單筆登記卡片（小表格樣式），供「一般列表」與「分組展開明細」共用
+function renderRegItemHtml(item) {
+  const parts = [];
+  if (item.count500 > 0) parts.push(`500元 x${item.count500}`);
+  if (item.count300 > 0) parts.push(`300元 x${item.count300}`);
+  if (item.countSenior500 > 0) parts.push(`敬老500 x${item.countSenior500}`);
+  if (item.countSenior300 > 0) parts.push(`敬老300 x${item.countSenior300}`);
+
+  return `
+    <div class="reg-item" data-id="${escapeHtml(item.id)}">
+      <table class="reg-table">
+        <tr><th>姓名</th><td>${escapeHtml(item.name)}</td></tr>
+        <tr><th>時間</th><td>${escapeHtml(formatShortTime(item.timestamp))}</td></tr>
+        <tr><th>票種</th><td>${escapeHtml(parts.join("、"))}</td></tr>
+        <tr><th>金額</th><td class="amount-cell">NT$ ${item.totalAmount}</td></tr>
+        ${item.note ? `<tr><th>備註</th><td>${escapeHtml(item.note)}</td></tr>` : ""}
+      </table>
+      <div class="checks">
+        <label>
+          <input type="checkbox" class="paidCheck" data-timestamp="${escapeHtml(item.timestamp)}" data-name="${escapeHtml(item.name)}" ${item.paid ? "checked" : ""} />
+          已付款
+        </label>
+        <label>
+          <input type="checkbox" class="pickedCheck" data-timestamp="${escapeHtml(item.timestamp)}" data-name="${escapeHtml(item.name)}" ${item.pickedUp ? "checked" : ""} />
+          已取票
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function attachCheckboxListeners(container) {
+  container.querySelectorAll(".paidCheck").forEach(cb => {
+    cb.addEventListener("change", (e) => onToggleStatus(e.target, "paid"));
+  });
+  container.querySelectorAll(".pickedCheck").forEach(cb => {
+    cb.addEventListener("change", (e) => onToggleStatus(e.target, "pickedUp"));
+  });
+}
+
+// 將 "yyyy/MM/dd HH:mm:ss" 格式縮短為 "MM/dd HH:mm"
+function formatShortTime(fullTimestamp) {
+  const segs = fullTimestamp.split(" ");
+  if (segs.length < 2) return fullTimestamp;
+  const dateSegs = segs[0].split("/");
+  const shortDate = dateSegs.length === 3 ? `${dateSegs[1]}/${dateSegs[2]}` : segs[0];
+  const shortTime = segs[1].slice(0, 5);
+  return `${shortDate} ${shortTime}`;
+}
+
+async function onToggleStatus(checkbox, field) {
+  const timestamp = checkbox.dataset.timestamp;
+  const name = checkbox.dataset.name;
+  const value = checkbox.checked;
+  checkbox.disabled = true;
+
+  try {
+    const result = await apiRequest("updateCheckStatus", {
+      pw: adminPassword,
+      timestamp,
+      name,
+      field,
+      value: value ? "true" : "false"
+    });
+    if (result.status === "success") {
+      const item = allRegistrations.find(r => r.timestamp === timestamp && r.name === name);
+      if (item) item[field] = value;
+    } else {
+      alert(result.message || "更新失敗");
+      checkbox.checked = !value;
+    }
+  } catch (err) {
+    alert("更新失敗：" + err.message);
+    checkbox.checked = !value;
+  } finally {
+    checkbox.disabled = false;
+  }
+}
+
+// ================= 共用工具 =================
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+</script>
+</body>
+</html>
