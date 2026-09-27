@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>線上選位</title>
+<link rel="stylesheet" href="https://font.emtech.cc/css/ChironSungHK">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.min.js"></script>
+<style>
+  :root {
+    --brand: #baa483;
+    --brand-dark: #8c7a5c;
+    --brand-darker: #6b5d43;
+    --price500: #c9974d;
+    --price500-bg: #fbeed9;
+    --price300: #6f9a86;
+    --price300-bg: #e2efe9;
+    --taken: #d8d3c8;
+    --mine: #6b5d43;
+    --text: #4a4033;
+    --bg: #faf7f2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'ChironSungHK', "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 18px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px; padding-bottom: 100px; }
+  h1 { font-size: 1.5em; color: var(--brand-darker); margin: 0 0 16px; text-align: center; }
+  .card {
+    background: #fff;
+    border: 1px solid #e7e0d3;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  input[type=text] {
+    width: 100%;
+    font-size: 1.1em;
+    padding: 14px;
+    border: 2px solid var(--brand);
+    border-radius: 8px;
+    font-family: inherit;
+  }
+  button {
+    font-family: inherit;
+    font-size: 1.05em;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 20px;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--brand-darker);
+    color: #fff;
+    width: 100%;
+    margin-top: 12px;
+  }
+  .btn-primary:disabled { background: #c9c2b3; cursor: not-allowed; }
+  .btn-secondary {
+    background: #fff;
+    border: 2px solid var(--brand-darker);
+    color: var(--brand-darker);
+  }
+  .msg-empty {
+    text-align: center;
+    color: #a08a63;
+    font-size: 1.1em;
+    padding: 20px 0;
+  }
+  .msg-error {
+    background: #f9e4e0;
+    color: #a3453a;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+
+  /* 票數提示列（sticky） */
+  .ticket-bar {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 20;
+    padding: 12px 0;
+    border-bottom: 2px solid #e7e0d3;
+  }
+  .ticket-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.95em;
+    font-weight: bold;
+  }
+  .pill.p500 { background: var(--price500-bg); color: var(--price500); }
+  .pill.p300 { background: var(--price300-bg); color: var(--price300); }
+  .swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+  /* 樓層 tab */
+  .tabs { display: flex; gap: 8px; margin: 16px 0; }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    background: #fff;
+    border: 2px solid var(--brand);
+    color: var(--brand-darker);
+    font-weight: bold;
+  }
+  .tab.active { background: var(--brand-darker); color: #fff; border-color: var(--brand-darker); }
+
+  /* 座位表 */
+  /* 座位表：整層共用一條水平捲軸，排標籤在捲動時固定在左側 */
+  .floor-scroll {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .row-line { display: flex; align-items: center; margin-bottom: 8px; width: max-content; }
+  .row-label {
+    position: sticky;
+    left: 0;
+    flex: 0 0 52px;
+    font-weight: bold;
+    color: var(--brand-darker);
+    font-size: 0.9em;
+    text-align: right;
+    padding-right: 8px;
+    background: #fff;
+    z-index: 2;
+  }
+  .seats-line {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 42px;
+    gap: 6px;
+  }
+  .seat {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85em;
+    font-weight: bold;
+    border: 2px solid transparent;
+  }
+  .seat.p500 { background: var(--price500-bg); color: var(--price500); border-color: var(--price500); }
+  .seat.p300 { background: var(--price300-bg); color: var(--price300); border-color: var(--price300); }
+  .seat.taken { background: var(--taken); color: #9a9384; border-color: var(--taken); cursor: not-allowed; }
+  .seat.mine { background: var(--mine); color: #fff; border-color: var(--mine); }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.9em; margin: 8px 0 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+
+  /* 送出確認 / 完成畫面 */
+  .done-list { list-style: none; padding: 0; margin: 8px 0; }
+  .done-list li {
+    padding: 10px 14px;
+    background: var(--price500-bg);
+    border-radius: 8px;
+    margin-bottom: 6px;
+  }
+
+  /* Admin */
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    font-family: monospace;
+    font-size: 0.95em;
+    padding: 12px;
+    border: 2px solid var(--brand);
+    border-radius: 8px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e7e0d3; }
+  th { color: var(--brand-darker); }
+</style>
+</head>
+<body>
+<div id="app" class="wrap">
+  <h1>{{ isAdmin ? '選位後台' : '線上選位' }}</h1>
+
+  <!-- ============ 一般使用者 ============ -->
+  <template v-if="!isAdmin">
+
+    <!-- Step 1：輸入姓名 -->
+    <div class="card" v-if="stage === 'input'">
+      <p>請輸入您登記時使用的姓名：</p>
+      <input type="text" v-model.trim="name" @keyup.enter="lookup" placeholder="請輸入姓名">
+      <div v-if="errorMsg" class="msg-error">{{ errorMsg }}</div>
+      <button class="btn-primary" :disabled="!name || loading" @click="lookup">
+        {{ loading ? '查詢中…' : '查詢票券' }}
+      </button>
+    </div>
+
+    <!-- 查無票券 -->
+    <div class="card msg-empty" v-if="stage === 'empty'">
+      {{ emptyMessage }}
+      <div style="margin-top:16px;">
+        <button class="btn-secondary" @click="reset">重新查詢</button>
+      </div>
+    </div>
+
+    <!-- 已完成選位（唯讀） -->
+    <div class="card" v-if="stage === 'done'">
+      <p>{{ name }} 您好，您已完成選位：</p>
+      <ul class="done-list">
+        <li v-for="s in doneSeats" :key="s.seat_id">
+          {{ s.floor }} {{ s.row }}排{{ s.seat }}號（{{ s.price }}元）
+        </li>
+      </ul>
+      <p style="color:#a08a63; font-size:0.9em;">如需修改座位，請洽總幹事。</p>
+    </div>
+
+    <!-- Step 2：選位 -->
+    <template v-if="stage === 'select'">
+      <div class="ticket-bar">
+        <div class="ticket-row">
+          <span>{{ name }}</span>
+          <span class="pill p500"><span class="swatch" style="background:var(--price500)"></span>500元 {{ selected500.length }}/{{ price500 }}</span>
+          <span class="pill p300"><span class="swatch" style="background:var(--price300)"></span>300元 {{ selected300.length }}/{{ price300 }}</span>
+        </div>
+        <div v-if="errorMsg" class="msg-error" style="margin-top:8px;">{{ errorMsg }}</div>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:var(--price500-bg); border:2px solid var(--price500)"></span>500元可選</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--price300-bg); border:2px solid var(--price300)"></span>300元可選</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--mine)"></span>已選（我）</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--taken)"></span>不可選</div>
+      </div>
+
+      <div class="tabs">
+        <div v-for="f in floors" :key="f" class="tab" :class="{active: currentFloor === f}" @click="currentFloor = f">{{ f }}</div>
+      </div>
+
+      <div class="card">
+        <div class="floor-scroll">
+          <div v-for="rowKey in rowsForFloor" :key="rowKey" class="row-line">
+            <div class="row-label">{{ rowKey }}排</div>
+            <div class="seats-line">
+              <div
+                v-for="seat in seatsByRow[rowKey]"
+                :key="seat.seat_id"
+                class="seat"
+                :class="seatClass(seat)"
+                :style="{ gridColumn: seatCol(seat) }"
+                @click="toggleSeat(seat)"
+              >{{ seat.seat }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="!isFullySelected" class="msg-empty" style="padding:8px 0;">
+        尚需選擇：{{ remainingText }}
+      </div>
+      <button class="btn-primary" :disabled="submitting || !isFullySelected" @click="confirmSubmit">
+        {{ submitting ? '送出中…' : '確認送出選位' }}
+      </button>
+      <button class="btn-secondary" style="width:100%; margin-top:8px;" @click="reset">重新查詢姓名</button>
+    </template>
+  </template>
+
+  <!-- ============ 後台 ============ -->
+  <template v-else>
+    <div class="card" v-if="!adminOk">
+      <p>請輸入後台密碼（或在網址加上 ?admin=1&pw=密碼）：</p>
+      <input type="text" v-model="adminPw" placeholder="密碼">
+      <div v-if="errorMsg" class="msg-error">{{ errorMsg }}</div>
+      <button class="btn-primary" @click="checkAdminPw">登入</button>
+    </div>
+
+    <template v-else>
+      <div class="card">
+        <p><strong>匯入 / 更新座位表</strong></p>
+        <p style="font-size:0.9em; color:#8c7a5c;">
+          每行一個座位，格式：樓層,排,號,票價[,LOCKED]（LOCKED 代表一開始就鎖定、不開放選位）<br>
+          例如：1F,8,1,500 　或　1F,9,3,300,LOCKED
+        </p>
+        <textarea v-model="importText" placeholder="1F,1,1,500&#10;1F,1,2,500&#10;1F,2,1,300,LOCKED"></textarea>
+        <button class="btn-primary" @click="importSeats">匯入座位表</button>
+        <div v-if="importResult" style="margin-top:10px;">
+          新增 {{ importResult.added }}、更新 {{ importResult.updated }}、略過（已售出）{{ importResult.skipped }}
+          <div v-if="importResult.errors && importResult.errors.length" class="msg-error">
+            <div v-for="e in importResult.errors">{{ e }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p><strong>已選位名單</strong>（共 {{ selections.length }} 人）</p>
+        <input type="text" v-model="searchName" placeholder="搜尋姓名" style="margin-bottom:10px;">
+        <table>
+          <thead><tr><th>姓名</th><th>張數</th><th>座位</th></tr></thead>
+          <tbody>
+            <tr v-for="s in filteredSelections" :key="s.name">
+              <td>{{ s.name }}</td>
+              <td>{{ s.count }}</td>
+              <td>{{ s.seats.join('、') }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="btn-secondary" style="margin-top:10px;" @click="loadSelections">重新整理</button>
+      </div>
+    </template>
+  </template>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+// ⚠️ 請改成你的 GAS 部署網址（/exec 結尾）
+const API_URL = 'https://script.google.com/macros/s/AKfycbyuJkxvlKJdjZowWFbNA6Zh3XzLNJArhKl3taFR67CaHM43Jkj8vG41XGk5L98T_jfZ_A/exec';
+
+// 是否為本機 file:// 測試（用 JSONP），部署到網路上後用 fetch
+const USE_JSONP = location.protocol === 'file:';
+const JSONP_TIMEOUT_MS = 15000;
+
+// 匯入座位表的內容可能很長（幾百個座位），塞進網址當 JSONP 的 GET 請求
+// 常常會超過網址長度上限，導致 GAS 回傳錯誤頁（text/html）被瀏覽器擋下。
+// 這個動作固定走 fetch(POST)，不受本機 file:// 測試模式影響。
+const FORCE_POST_ACTIONS = ['adminImportSeats'];
+
+function callApi(params) {
+  if (USE_JSONP && !FORCE_POST_ACTIONS.includes(params.action)) {
+    return new Promise((resolve, reject) => {
+      const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+      let done = false;
+
+      const cleanup = () => {
+        delete window[cbName];
+        if (script.parentNode) script.remove();
+        clearTimeout(timer);
+      };
+
+      const timer = setTimeout(() => {
+        if (done) return;
+        done = true;
+        cleanup();
+        reject(new Error('連線逾時（超過 ' + (JSONP_TIMEOUT_MS / 1000) + ' 秒無回應），請重試'));
+      }, JSONP_TIMEOUT_MS);
+
+      window[cbName] = (data) => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve(data);
+      };
+
+      const qs = new URLSearchParams({ ...params, callback: cbName }).toString();
+      const script = document.createElement('script');
+      script.src = API_URL + '?' + qs;
+      script.onerror = () => {
+        if (done) return;
+        done = true;
+        cleanup();
+        reject(new Error('連線失敗（請確認 API_URL 或網路連線）'));
+      };
+      document.body.appendChild(script);
+    });
+  } else {
+    return fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(params)
+    }).then(r => r.json());
+  }
+}
+
+createApp({
+  data() {
+    return {
+      isAdmin: new URLSearchParams(location.search).get('admin') === '1',
+      adminPw: new URLSearchParams(location.search).get('pw') || '',
+      adminOk: false,
+
+      stage: 'input', // input | empty | select | done
+      name: '',
+      loading: false,
+      submitting: false,
+      errorMsg: '',
+      emptyMessage: '您尚未登記可選位票券，有任何問題請洽總幹事',
+
+      price500: 0,
+      price300: 0,
+      doneSeats: [],
+
+      seats: [],
+      floors: [],
+      currentFloor: '',
+      selectedIds: [], // 目前使用者選取中（尚未送出）的 seat_id
+
+      importText: '',
+      importResult: null,
+      selections: [],
+      searchName: ''
+    };
+  },
+  computed: {
+    rowsForFloor() {
+      const rows = [...new Set(this.seats.filter(s => s.floor === this.currentFloor).map(s => s.row))];
+      rows.sort((a, b) => Number(a) - Number(b));
+      return rows;
+    },
+    seatsByRow() {
+      const map = {};
+      this.seats.filter(s => s.floor === this.currentFloor).forEach(s => {
+        if (!map[s.row]) map[s.row] = [];
+        map[s.row].push(s);
+      });
+      Object.keys(map).forEach(r => map[r].sort((a, b) => Number(a.seat) - Number(b.seat)));
+      return map;
+    },
+    selected500() {
+      return this.selectedIds.filter(id => this.seats.find(s => s.seat_id === id)?.price === 500);
+    },
+    selected300() {
+      return this.selectedIds.filter(id => this.seats.find(s => s.seat_id === id)?.price === 300);
+    },
+    filteredSelections() {
+      if (!this.searchName) return this.selections;
+      return this.selections.filter(s => s.name.includes(this.searchName));
+    },
+    isFullySelected() {
+      return this.selected500.length === this.price500 && this.selected300.length === this.price300;
+    },
+    floorMaxSeat() {
+      const nums = this.seats.filter(s => s.floor === this.currentFloor).map(s => Number(s.seat));
+      return nums.length ? Math.max(...nums) : 0;
+    },
+    remainingText() {
+      const parts = [];
+      const left500 = this.price500 - this.selected500.length;
+      const left300 = this.price300 - this.selected300.length;
+      if (left500 > 0) parts.push('500元 x ' + left500);
+      if (left300 > 0) parts.push('300元 x ' + left300);
+      return parts.join('、');
+    }
+  },
+  methods: {
+    async lookup() {
+      this.errorMsg = '';
+      this.loading = true;
+      try {
+        const res = await callApi({ action: 'queryTickets', name: this.name });
+        if (!res.success) {
+          this.emptyMessage = res.message;
+          this.stage = 'empty';
+          return;
+        }
+        this.price500 = res.price500;
+        this.price300 = res.price300;
+        if (res.alreadySubmitted) {
+          this.doneSeats = res.selectedSeats;
+          this.stage = 'done';
+          return;
+        }
+        this.seats = res.seats || [];
+        this.floors = [...new Set(this.seats.map(s => s.floor))];
+        this.currentFloor = this.floors[0] || '';
+        this.stage = 'select';
+      } catch (e) {
+        this.errorMsg = '查詢失敗，請確認網路連線後再試一次';
+      } finally {
+        this.loading = false;
+      }
+    },
+    async loadSeats() {
+      const res = await callApi({ action: 'getSeatMap' });
+      this.seats = res.seats || [];
+      this.floors = [...new Set(this.seats.map(s => s.floor))];
+      this.currentFloor = this.floors[0] || '';
+    },
+    seatCol(seat) {
+      const centerLeftCols = Math.ceil(this.floorMaxSeat / 2);
+      const n = Number(seat.seat);
+      return n % 2 === 1
+        ? centerLeftCols - Math.ceil(n / 2) + 1
+        : centerLeftCols + (n / 2);
+    },
+    seatClass(seat) {
+      if (this.selectedIds.includes(seat.seat_id)) return 'mine';
+      if (seat.status !== 'OPEN') return 'taken';
+      return seat.price === 500 ? 'p500' : 'p300';
+    },
+    toggleSeat(seat) {
+      this.errorMsg = '';
+      if (seat.status !== 'OPEN' && !this.selectedIds.includes(seat.seat_id)) return; // 不可選
+      if (this.selectedIds.includes(seat.seat_id)) {
+        this.selectedIds = this.selectedIds.filter(id => id !== seat.seat_id);
+        return;
+      }
+      const limit = seat.price === 500 ? this.price500 : this.price300;
+      const current = seat.price === 500 ? this.selected500.length : this.selected300.length;
+      if (current >= limit) {
+        this.errorMsg = seat.price + '元座位已選滿（' + limit + '張），請先取消其他選位再重選';
+        return;
+      }
+      this.selectedIds.push(seat.seat_id);
+    },
+    async confirmSubmit() {
+      const total = this.selectedIds.length;
+      if (!confirm('確定送出 ' + total + ' 個座位嗎？送出後將無法自行修改。')) return;
+      this.submitting = true;
+      this.errorMsg = '';
+      try {
+        const res = await callApi({ action: 'submitSelection', name: this.name, seatIds: JSON.stringify(this.selectedIds) });
+        if (!res.success) {
+          this.errorMsg = res.message;
+          if (res.seats) this.seats = res.seats; // 重新整理最新座位表
+          return;
+        }
+        this.doneSeats = this.seats.filter(s => this.selectedIds.includes(s.seat_id));
+        this.stage = 'done';
+      } catch (e) {
+        this.errorMsg = '送出失敗，請確認網路連線後再試一次';
+      } finally {
+        this.submitting = false;
+      }
+    },
+    reset() {
+      this.stage = 'input';
+      this.name = '';
+      this.selectedIds = [];
+      this.errorMsg = '';
+    },
+
+    // ---- admin ----
+    async checkAdminPw() {
+      this.errorMsg = '';
+      try {
+        const res = await callApi({ action: 'adminCheckPw', pw: this.adminPw });
+        if (!res.success) { this.errorMsg = '密碼錯誤'; return; }
+        this.adminOk = true;
+        this.loadSelections();
+      } catch (e) {
+        this.errorMsg = '連線失敗';
+      }
+    },
+    async importSeats() {
+      const res = await callApi({ action: 'adminImportSeats', pw: this.adminPw, text: this.importText });
+      this.importResult = res;
+      this.loadSelections();
+    },
+    async loadSelections() {
+      const res = await callApi({ action: 'adminGetSelections', pw: this.adminPw });
+      this.selections = res.selections || [];
+    }
+  },
+  mounted() {
+    if (this.isAdmin && this.adminPw) this.checkAdminPw();
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
