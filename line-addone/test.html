@@ -1,29 +1,72 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script></head>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>shareTargetPicker 測試</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
 <body>
-<button id="b" style="font-size:20px;padding:12px">分享測試卡片</button>
-<pre id="log"></pre>
+<div id="btns"></div>
+<pre id="log" style="white-space:pre-wrap"></pre>
+
 <script>
+const LIFF_ID = '2010938428-GGFYSiqQ';
 const log = m => document.getElementById('log').textContent += m + '\n';
-liff.init({ liffId: '2010938428-GGFYSiqQ' }).then(() => {
+
+// 五種測試訊息：從最單純到最接近正式卡片，用來找出哪個元素讓訊息送不出去
+const tests = {
+  'A 純文字': [{ type: 'text', text: '測試 A 純文字' }],
+
+  'B Flex 無按鈕': [{ type: 'flex', altText: 'B', contents: {
+    type: 'bubble', body: { type: 'box', layout: 'vertical', contents: [
+      { type: 'text', text: '測試 B Flex 無按鈕' }
+    ]}}}],
+
+  'C Flex URI 按鈕': [{ type: 'flex', altText: 'C', contents: {
+    type: 'bubble', body: { type: 'box', layout: 'vertical', contents: [
+      { type: 'text', text: '測試 C' },
+      { type: 'button', action: { type: 'uri', label: 'URI', uri: 'https://line.me' } }
+    ]}}}],
+
+  'D Flex Message 按鈕': [{ type: 'flex', altText: 'D', contents: {
+    type: 'bubble', body: { type: 'box', layout: 'vertical', contents: [
+      { type: 'text', text: '測試 D' },
+      { type: 'button', action: { type: 'message', label: 'Message', text: '測試 D 按鈕' } }
+    ]}}}],
+
+  'E Flex Postback 按鈕': [{ type: 'flex', altText: 'E', contents: {
+    type: 'bubble', body: { type: 'box', layout: 'vertical', contents: [
+      { type: 'text', text: '測試 E' },
+      { type: 'button', action: { type: 'postback', label: 'Postback', data: 'action=test&event_id=T1&item=A' } }
+    ]}}}]
+};
+
+function buildButtons() {
+  const box = document.getElementById('btns');
+  for (const [name, msgs] of Object.entries(tests)) {
+    const b = document.createElement('button');
+    b.textContent = name;
+    b.style.cssText = 'display:block;font-size:18px;padding:10px;margin:6px';
+    b.onclick = async () => {
+      try {
+        const res = await liff.shareTargetPicker(msgs);
+        log(name + ' → ' + (res ? 'status=' + res.status : '取消/無回傳'));
+      } catch (e) {
+        log(name + ' → error: ' + e);
+      }
+    };
+    box.appendChild(b);
+  }
+}
+
+liff.init({ liffId: LIFF_ID }).then(() => {
   if (!liff.isLoggedIn()) { liff.login(); return; }
-  log('liffId=' + '2010938428-GGFYSiqQ');
+  log('liffId=' + LIFF_ID);
   log('os=' + liff.getOS() + ' inApp=' + liff.isInClient() + ' sdk=' + liff.getVersion());
   log('shareTargetPicker available=' + liff.isApiAvailable('shareTargetPicker'));
+  buildButtons();
 }).catch(e => log('init error: ' + e));
-
-document.getElementById('b').onclick = async () => {
-  try {
-    const res = await liff.shareTargetPicker([{
-      type: 'flex', altText: '測試卡片',
-      contents: { type: 'bubble', body: { type: 'box', layout: 'vertical', contents: [
-        { type: 'text', text: '測試接龍 T1', weight: 'bold' },
-        { type: 'button', action: { type: 'postback', label: 'Postback 測試', data: 'action=test&event_id=T1&item=A' } },
-        { type: 'button', action: { type: 'message', label: 'Message 測試', text: '測試 T1 B' } }
-      ]}}
-    }]);
-    log(res ? 'status=' + res.status : '使用者取消或無回傳');
-  } catch (e) { log('error: ' + e); }
-};
-</script></body></html>
+</script>
+</body>
+</html>
