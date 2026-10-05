@@ -7,9 +7,10 @@
 <script>
 const log = m => document.getElementById('log').textContent += m + '\n';
 liff.init({ liffId: '2010938428-GGFYSiqQ' }).then(() => {
-  log('inApp=' + liff.isInClient() + ' loggedIn=' + liff.isLoggedIn());
+  if (!liff.isLoggedIn()) { liff.login(); return; }
+  log('liffId=' + '2010938428-GGFYSiqQ');
+  log('os=' + liff.getOS() + ' inApp=' + liff.isInClient() + ' sdk=' + liff.getVersion());
   log('shareTargetPicker available=' + liff.isApiAvailable('shareTargetPicker'));
-  if (!liff.isLoggedIn()) liff.login();
 }).catch(e => log('init error: ' + e));
 
 document.getElementById('b').onclick = async () => {
