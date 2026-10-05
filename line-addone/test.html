@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script></head>
+<body>
+<button id="b" style="font-size:20px;padding:12px">分享測試卡片</button>
+<pre id="log"></pre>
+<script>
+const log = m => document.getElementById('log').textContent += m + '\n';
+liff.init({ liffId: '2010938428-GGFYSiqQ' }).then(() => {
+  log('inApp=' + liff.isInClient() + ' loggedIn=' + liff.isLoggedIn());
+  log('shareTargetPicker available=' + liff.isApiAvailable('shareTargetPicker'));
+  if (!liff.isLoggedIn()) liff.login();
+}).catch(e => log('init error: ' + e));
+
+document.getElementById('b').onclick = async () => {
+  try {
+    const res = await liff.shareTargetPicker([{
+      type: 'flex', altText: '測試卡片',
+      contents: { type: 'bubble', body: { type: 'box', layout: 'vertical', contents: [
+        { type: 'text', text: '測試接龍 T1', weight: 'bold' },
+        { type: 'button', action: { type: 'postback', label: 'Postback 測試', data: 'action=test&event_id=T1&item=A' } },
+        { type: 'button', action: { type: 'message', label: 'Message 測試', text: '測試 T1 B' } }
+      ]}}
+    }]);
+    log(res ? 'status=' + res.status : '使用者取消或無回傳');
+  } catch (e) { log('error: ' + e); }
+};
+</script></body></html>
