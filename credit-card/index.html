@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>帳戶餘額</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: { paper: '#EDF0F3', ink: '#14202E', ok: '#1F7A63', alert: '#C0362C' } } }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+<style type="text/tailwindcss">
+  @layer components {
+    .btn { @apply rounded-md border border-ink/25 px-3 py-1.5 text-sm font-medium hover:bg-ink/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50; }
+    .btn-solid { @apply rounded-lg bg-ink px-4 py-2.5 text-sm font-bold text-white hover:bg-ink/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50; }
+    .field { @apply mt-1 w-full rounded-lg border border-ink/30 bg-white px-3 py-2 text-lg tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink; }
+  }
+</style>
+<style>
+  [v-cloak] { display: none; }
+  body { font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", system-ui, sans-serif; }
+  .hatch { background-image: repeating-linear-gradient(135deg, #C0362C 0 4px, #E7A59F 4px 8px); }
+</style>
+</head>
+<body class="bg-paper text-ink antialiased">
+<div id="app" v-cloak class="mx-auto max-w-lg px-4 pb-20 pt-6">
+
+  <!-- 登入 -->
+  <section v-if="!apiKey" class="mt-16">
+    <h1 class="text-2xl font-bold">帳戶餘額</h1>
+    <p class="mt-2 text-sm text-ink/70">輸入存取密碼後查看。</p>
+    <form @submit.prevent="saveKey" class="mt-6 flex gap-2">
+      <input v-model="keyInput" type="password" autocomplete="current-password" aria-label="存取密碼"
+             class="field mt-0 flex-1 text-base" placeholder="存取密碼">
+      <button type="submit" class="btn-solid">進入</button>
+    </form>
+    <p v-if="error" class="mt-3 text-sm text-alert">{{ error }}</p>
+  </section>
+
+  <!-- 主畫面 -->
+  <main v-else>
+    <header class="flex items-center justify-between">
+      <div class="flex items-center gap-1">
+        <button @click="changeMonth(-1)" aria-label="上個月" class="btn px-3 text-lg leading-none">‹</button>
+        <div class="min-w-[5.5rem] text-center text-lg font-bold tabular-nums">{{ month }}</div>
+        <button @click="changeMonth(1)" aria-label="下個月" class="btn px-3 text-lg leading-none">›</button>
+      </div>
+      <button @click="load" :disabled="loading" class="btn">{{ loading ? '讀取中…' : '重新整理' }}</button>
+    </header>
+
+    <p v-if="error" class="mt-4 rounded-lg border border-alert/30 bg-alert/10 p-3 text-sm text-alert">{{ error }}</p>
+
+    <section v-if="data" class="mt-6">
+      <h1 class="text-3xl font-bold leading-tight" :class="hero.tone">{{ hero.title }}</h1>
+      <p class="mt-1 text-sm text-ink/70">{{ hero.sub }}</p>
+    </section>
+    <p v-else-if="loading" class="mt-6 text-ink/70">讀取中…</p>
+
+    <ul v-if="data && data.warnings.length" class="mt-4 space-y-1 rounded-lg bg-amber-100 p-3 text-sm text-amber-900">
+      <li v-for="w in data.warnings" :key="w">{{ w }}</li>
+    </ul>
+
+    <ul v-if="data" class="mt-6 divide-y divide-ink/10 rounded-xl border border-ink/10 bg-white">
+      <li v-for="a in rows" :key="a.name" class="p-4">
+        <div class="flex items-baseline justify-between gap-3">
+          <div>
+            <span class="text-lg font-bold">{{ a.name }}</span>
+            <span class="ml-2 text-xs text-ink/60">{{ a.type === 'auto' ? '自動扣款' : '手動繳費' }}</span>
+          </div>
+          <div class="text-xl font-bold tabular-nums">{{ money(a.balance) }}</div>
+        </div>
+
+        <!-- 餘額 vs 待扣：深色=會被扣掉的部分、綠色=扣完剩下、紅斜線=不足的部分 -->
+        <div class="mt-3 flex h-2.5 overflow-hidden rounded-full bg-ink/10" role="img"
+             :aria-label="a.status.text">
+          <div class="bg-ink" :style="{ width: a.bar.pending + '%' }"></div>
+          <div class="bg-ok" :style="{ width: a.bar.left + '%' }"></div>
+          <div class="hatch" :style="{ width: a.bar.short + '%' }"></div>
+        </div>
+        <p class="mt-2 text-sm" :class="a.status.tone">{{ a.status.text }}</p>
+
+        <p class="mt-3 text-xs text-ink/60">最後異動 {{ a.updatedAt ? fmtTime(a.updatedAt) : '—' }}</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button v-if="!a.settled && a.pending > 0" class="btn-solid !px-3 !py-1.5 font-medium"
+                  :disabled="paying === a.name" @click="payBill(a)">
+            {{ paying === a.name ? '記錄中…' : (a.type === 'auto' ? '確認已扣款' : '記錄已繳費') }}
+          </button>
+          <button class="btn" @click="openAdjust(a)">存入／支出</button>
+          <button class="btn" @click="openSet(a)">校正餘額</button>
+        </div>
+      </li>
+    </ul>
+
+    <details v-if="data && data.recent.length" class="mt-6 rounded-xl border border-ink/10 bg-white">
+      <summary class="cursor-pointer p-4 text-sm font-bold">最近記錄</summary>
+      <ul class="divide-y divide-ink/10 border-t border-ink/10">
+        <li v-for="(r, i) in data.recent" :key="i" class="flex items-baseline justify-between gap-3 px-4 py-3 text-sm">
+          <div class="min-w-0">
+            <div class="truncate font-medium">{{ r.title || r.type }}</div>
+            <div class="text-xs text-ink/60">
+              <span>{{ r.account }}</span><span class="ml-2">{{ r.type }}</span><span v-if="r.date" class="ml-2">{{ r.date }}</span>
+            </div>
+          </div>
+          <div class="shrink-0 font-bold tabular-nums" :class="r.amount < 0 ? 'text-alert' : 'text-ok'">
+            {{ r.amount > 0 ? '+' : '' }}{{ money(r.amount) }}
+          </div>
+        </li>
+      </ul>
+    </details>
+
+    <footer class="mt-8 text-center">
+      <button @click="logout" class="text-xs text-ink/60 underline">清除已記住的密碼</button>
+    </footer>
+  </main>
+
+  <!-- 更新 / 增減視窗 -->
+  <div v-if="modal" class="fixed inset-0 z-20 flex items-end justify-center bg-ink/40 sm:items-center"
+       @click.self="modal = null">
+    <div role="dialog" aria-modal="true" class="w-full max-w-lg rounded-t-2xl bg-white p-5 sm:rounded-2xl">
+      <h2 class="text-lg font-bold">
+        {{ modal.type === 'set' ? '校正' + modal.account + '餘額' : modal.account + '存入／支出' }}
+      </h2>
+
+      <div v-if="modal.type === 'adjust'" class="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-ink/10 p-1" role="group" aria-label="存入或支出">
+        <button type="button" @click="modal.direction = 'in'" :class="seg(modal.direction === 'in')">存入</button>
+        <button type="button" @click="modal.direction = 'out'" :class="seg(modal.direction === 'out')">支出</button>
+      </div>
+
+      <label for="amount" class="mt-4 block text-sm font-medium">
+        {{ modal.type === 'set' ? '銀行 App 上的實際餘額' : '金額' }}
+      </label>
+      <input id="amount" v-model="modal.amount" v-focus type="number" inputmode="decimal" step="any"
+             class="field" @keyup.enter="submit">
+
+      <p v-if="modal.type === 'set'" class="mt-2 text-sm text-ink/70">儲存後會自動補一筆「校正」記錄，讓餘額和銀行一致。</p>
+
+      <p v-if="preview !== null" class="mt-2 text-sm text-ink/70">調整後餘額 {{ money(preview) }}</p>
+
+      <template v-if="modal.type === 'adjust'">
+        <label for="note" class="mt-4 block text-sm font-medium">說明（選填）</label>
+        <input id="note" v-model="modal.note" type="text" maxlength="100" class="field text-base"
+               placeholder="例如：薪轉、轉帳給房東">
+      </template>
+
+      <label v-if="modal.showMark" class="mt-3 flex items-start gap-2 text-sm">
+        <input type="checkbox" v-model="modal.markPaid" class="mt-1 h-4 w-4">
+        <span>這是本月扣款後的餘額，{{ month }} 的自動扣款視為已扣</span>
+      </label>
+
+      <p v-if="modal.error" class="mt-3 text-sm text-alert">{{ modal.error }}</p>
+
+      <div class="mt-5 flex justify-end gap-2">
+        <button type="button" class="btn" @click="modal = null">取消</button>
+        <button type="button" class="btn-solid" :disabled="saving" @click="submit">{{ saving ? '儲存中…' : submitLabel }}</button>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="toast" role="status" class="fixed bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-sm text-white">{{ toast }}</div>
+</div>
+
+<script>
+  // ★ 改成你的 Worker 網址（不要在結尾加 /）
+  const API_BASE = "https://credit-card-helper.ivy2270.workers.dev";
+
+  const { createApp, ref, computed, onMounted } = Vue;
+
+  // ---- 月份工具（民國年）----
+  const fmtMonth = (y, m) => `${y}.${String(m).padStart(2, "0")}`;
+  function currentMonth() {
+    const tw = new Date(Date.now() + 8 * 3600 * 1000);
+    return fmtMonth(tw.getUTCFullYear() - 1911, tw.getUTCMonth() + 1);
+  }
+  function shiftMonth(s, delta) {
+    let [y, m] = s.split(".").map(Number);
+    m += delta;
+    while (m > 12) { m -= 12; y++; }
+    while (m < 1) { m += 12; y--; }
+    return fmtMonth(y, m);
+  }
+
+  // ---- 顯示工具 ----
+  function money(n) {
+    const abs = Math.abs(Number(n) || 0).toLocaleString("zh-TW", { maximumFractionDigits: 2 });
+    return (n < 0 ? "−" : "") + "NT$ " + abs;
+  }
+  function fmtTime(iso) {
+    return new Date(iso).toLocaleString("zh-TW", {
+      timeZone: "Asia/Taipei", month: "numeric", day: "numeric",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    });
+  }
+  function barOf(a) {
+    const bal = Math.max(a.balance, 0);
+    const total = Math.max(bal, a.pending, 1);
+    const covered = Math.min(bal, a.pending);
+    return {
+      pending: (covered / total) * 100,
+      left: ((bal - covered) / total) * 100,
+      short: (Math.max(a.pending - bal, 0) / total) * 100,
+    };
+  }
+  function statusOf(a) {
+    if (a.shortfall > 0) {
+      return { text: `待扣 ${money(a.pending)}，還差 ${money(a.shortfall)}，扣款前請存入`, tone: "text-alert font-bold" };
+    }
+    if (a.settled) {
+      return { text: a.type === "auto" ? "本月已扣款" : "本月已繳費", tone: "text-ink/70" };
+    }
+    if (a.pending > 0) {
+      return { text: `待扣 ${money(a.pending)}，扣款後剩 ${money(a.remaining)}`, tone: "text-ok" };
+    }
+    return { text: "本月沒有待扣金額", tone: "text-ink/70" };
+  }
+
+  createApp({
+    setup() {
+      const apiKey = ref(localStorage.getItem("balance_key") || "");
+      const keyInput = ref("");
+      const month = ref(currentMonth());
+      const data = ref(null);
+      const loading = ref(false);
+      const saving = ref(false);
+      const error = ref("");
+      const modal = ref(null);
+      const toast = ref("");
+      const paying = ref("");
+
+      async function api(path, body) {
+        const res = await fetch(API_BASE + path, {
+          method: body ? "POST" : "GET",
+          headers: { "X-API-Key": apiKey.value, ...(body ? { "Content-Type": "application/json" } : {}) },
+          body: body ? JSON.stringify(body) : undefined,
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          logout();
+          throw new Error(json.error || "密碼錯誤");
+        }
+        if (!res.ok) throw new Error(json.error || `請求失敗（${res.status}）`);
+        return json;
+      }
+
+      async function load() {
+        loading.value = true;
+        error.value = "";
+        try {
+          data.value = await api(`/api/summary?month=${month.value}`);
+        } catch (e) {
+          error.value = e.message;
+        } finally {
+          loading.value = false;
+        }
+      }
+
+      function saveKey() {
+        const key = keyInput.value.trim();
+        if (!key) return;
+        apiKey.value = key;
+        localStorage.setItem("balance_key", key);
+        keyInput.value = "";
+        load();
+      }
+
+      function logout() {
+        apiKey.value = "";
+        data.value = null;
+        localStorage.removeItem("balance_key");
+      }
+
+      function changeMonth(delta) {
+        month.value = shiftMonth(month.value, delta);
+        load();
+      }
+
+      // ---- 視窗 ----
+      function openSet(a) {
+        modal.value = {
+          type: "set", account: a.name, amount: String(a.balance),
+          showMark: a.type === "auto" && !a.settled, markPaid: true, error: "",
+        };
+      }
+      function openAdjust(a) {
+        modal.value = { type: "adjust", account: a.name, direction: "in", amount: "", note: "", error: "" };
+      }
+
+      const currentAccount = computed(() =>
+        modal.value && data.value ? data.value.accounts.find((x) => x.name === modal.value.account) : null);
+
+      const preview = computed(() => {
+        const m = modal.value;
+        if (!m || m.type !== "adjust" || !currentAccount.value) return null;
+        const amt = Number(m.amount);
+        if (m.amount === "" || !Number.isFinite(amt) || amt <= 0) return null;
+        return currentAccount.value.balance + (m.direction === "in" ? amt : -amt);
+      });
+
+      const submitLabel = computed(() => {
+        const m = modal.value;
+        if (!m) return "";
+        if (m.type === "set") return "儲存校正";
+        return m.direction === "in" ? "確認存入" : "確認支出";
+      });
+
+      async function submit() {
+        const m = modal.value;
+        if (!m || saving.value) return;
+        const amount = Number(m.amount);
+        if (m.amount === "" || !Number.isFinite(amount)) { m.error = "請輸入數字"; return; }
+        if (m.type === "adjust" && amount <= 0) { m.error = "金額要大於 0"; return; }
+
+        saving.value = true;
+        m.error = "";
+        try {
+          if (m.type === "set") {
+            data.value = await api("/api/set-balance", {
+              account: m.account, balance: amount, markPaid: m.showMark && m.markPaid, month: month.value,
+            });
+            showToast(`已校正${m.account}餘額`);
+          } else {
+            data.value = await api("/api/adjust", {
+              account: m.account, delta: m.direction === "in" ? amount : -amount, note: m.note.trim(), month: month.value,
+            });
+            showToast(m.direction === "in" ? `已存入${m.account}` : `已記錄${m.account}支出`);
+          }
+          modal.value = null;
+        } catch (e) {
+          m.error = e.message;
+        } finally {
+          saving.value = false;
+        }
+      }
+
+      async function payBill(a) {
+        if (paying.value) return;
+        const label = a.type === "auto" ? "已扣款" : "已繳費";
+        if (!confirm(`確認 ${a.name} ${month.value} 的 ${money(a.pending)} ${label}？\n會寫入一筆支出記錄，餘額隨之減少。`)) return;
+        paying.value = a.name;
+        error.value = "";
+        try {
+          data.value = await api("/api/pay-bill", { account: a.name, month: month.value });
+          showToast(`已記錄${a.name}${label}`);
+        } catch (e) {
+          error.value = e.message;
+        } finally {
+          paying.value = "";
+        }
+      }
+
+      let toastTimer;
+      function showToast(text) {
+        toast.value = text;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => (toast.value = ""), 2500);
+      }
+
+      // ---- 畫面資料 ----
+      const rows = computed(() =>
+        data.value ? data.value.accounts.map((a) => ({ ...a, bar: barOf(a), status: statusOf(a) })) : []);
+
+      const hero = computed(() => {
+        const d = data.value;
+        if (!d) return {};
+        if (!d.billFound) {
+          return { tone: "text-ink", title: `找不到 ${d.month} 的帳單`, sub: "請確認 Notion 帳單資料庫已建立這個月份。" };
+        }
+        const short = d.accounts.filter((a) => a.shortfall > 0);
+        if (short.length) {
+          const sum = short.reduce((s, a) => s + a.shortfall, 0);
+          return { tone: "text-alert", title: `${short.length} 個帳戶餘額不足`, sub: `合計還差 ${money(sum)}，扣款日前請存入。` };
+        }
+        return {
+          tone: "text-ok", title: "本月扣款都夠",
+          sub: `待扣合計 ${money(d.totals.pending)}，扣完共剩 ${money(d.totals.remaining)}。`,
+        };
+      });
+
+      const seg = (active) =>
+        "rounded-md py-2 text-sm font-bold " + (active ? "bg-white shadow-sm" : "text-ink/70");
+
+      onMounted(() => {
+        window.addEventListener("keydown", (e) => { if (e.key === "Escape") modal.value = null; });
+        if (apiKey.value) load();
+      });
+
+      return {
+        apiKey, keyInput, month, data, loading, saving, error, modal, toast, paying,
+        rows, hero, preview, submitLabel,
+        saveKey, logout, changeMonth, load, openSet, openAdjust, submit, payBill,
+        money, fmtTime, seg,
+      };
+    },
+  })
+    .directive("focus", { mounted: (el) => el.focus() })
+    .mount("#app");
+</script>
+</body>
+</html>
