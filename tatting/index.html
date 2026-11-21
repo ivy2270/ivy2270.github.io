@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tatting Calc Pro</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; color: #333; }
+        .container { background: white; padding: 20px; border-radius: 15px; max-width: 500px; margin: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; margin-top: 0; font-size: 1.2em; color: #2c3e50; line-height: 1.4; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .config-box { margin: 15px 0; padding: 12px; background: #eef9ff; border-radius: 10px; border: 1px solid #bde4ff; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        .item { margin-bottom: 5px; }
+        label { display: block; font-size: 11px; font-weight: bold; color: #555; margin-bottom: 4px; height: 30px; overflow: hidden; }
+        input { width: 100%; padding: 12px 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #fafafa; -webkit-appearance: none; }
+        input:focus { border-color: #3498db; background: #fff; outline: none; }
+        .repeat-box { margin: 15px 0; padding: 12px; background: #fffdf0; border-radius: 10px; border: 1px solid #f9f1c7; }
+        .res-area { display: flex; gap: 10px; margin-top: 20px; }
+        .res-box { flex: 1; padding: 15px 5px; border-radius: 12px; text-align: center; color: white; }
+        .a-color { background: #3498db; }
+        .b-color { background: #e74c3c; }
+        .num { font-size: 24px; font-weight: bold; display: block; margin: 5px 0; }
+        .label-en { font-size: 10px; display: block; text-transform: uppercase; opacity: 0.9; }
+        .footer { font-size: 11px; color: #aaa; text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Tatting Thread Calculator<br>梭編線長計算器</h2>
+    
+    <div class="config-box">
+        <label style="height:auto; color:#2980b9;">Calibration Factor 校正比例 (Default: 1)</label>
+        <input type="number" id="factor" value="1" step="0.01" oninput="autoCalc()">
+    </div>
+    
+    <div class="grid">
+        <div class="item">
+            <label>順時環 CW Ring<br>(B2)</label>
+            <input type="text" id="b2" value="" placeholder="輸入數字或加總" oninput="autoCalc()">
+        </div>
+        <div class="item">
+            <label>逆時環 CCW Ring<br>(B4)</label>
+            <input type="text" id="b4" value="" placeholder="輸入數字或加總" oninput="autoCalc()">
+        </div>
+        <div class="item">
+            <label>順時橋 CW Chain<br>(B5)</label>
+            <input type="text" id="b5" value="" placeholder="輸入數字或加總" oninput="autoCalc()">
+        </div>
+        <div class="item">
+            <label>逆時橋 CCW Chain<br>(B3)</label>
+            <input type="text" id="b3" value="" placeholder="輸入數字或加總" oninput="autoCalc()">
+        </div>
+        <div class="item">
+            <label>順環耳 CW Ring Picot<br>(B7)</label>
+            <input type="text" id="b7" value="" placeholder="輸入數字或加總" oninput="autoCalc()">
+        </div>
+        <div class="item">
+            <label>逆環耳 CCW Ring Picot<br>(B9)</label>
+            <input type="text" id="b9" value="" placeholder="輸入數字或加總" oninput="autoCalc()">
+        </div>
+        <div class="item">
+            <label>順橋耳 CW Chain Picot<br>(B10)</label>
+            <input type="text" id="b10" value="" placeholder="輸入數字或加總" oninput="autoCalc()">
+        </div>
+        <div class="item">
+            <label>逆橋耳 CCW Chain Picot<br>(B8)</label>
+            <input type="text" id="b8" value="" placeholder="輸入數字或加總" oninput="autoCalc()">
+        </div>
+    </div>
+
+    <div class="repeat-box">
+        <label style="height:auto;">Total Repeats 重複次數 (B16)</label>
+        <input type="number" id="b16" value="" placeholder="輸入重複次數" oninput="autoCalc()">
+    </div>
+
+    <div class="res-area">
+        <div class="res-box a-color">
+            <span class="label-en">Shuttle A</span>
+            <span>梭子 A 總長</span>
+            <span id="ra" class="num">0.0</span>cm
+        </div>
+        <div class="res-box b-color">
+            <span class="label-en">Shuttle B</span>
+            <span>梭子 B 總長</span>
+            <span id="rb" class="num">0.0</span>cm
+        </div>
+    </div>
+
+    <div class="footer">
+        支援以空格、加號(+)或逗號(,)分隔多個數字加總
+    </div>
+</div>
+
+<script>
+function autoCalc() {
+    function g(id) { 
+        var val = document.getElementById(id).value;
+        if (val === "" || val === null) return 0;
+        
+        // 支援透過空格、加號 (+) 或逗號 (,) 分隔多個數字並自動加總
+        var parts = val.toString().split(/[\s,\+]+/);
+        var sum = 0;
+        for (var i = 0; i < parts.length; i++) {
+            var num = parseFloat(parts[i]);
+            if (!isNaN(num)) {
+                sum += num;
+            }
+        }
+        return sum;
+    }
+    
+    var f = g('factor'); // 校正比例
+    var b2 = g('b2'), b3 = g('b3'), b4 = g('b4'), b5 = g('b5');
+    var b7 = g('b7'), b8 = g('b8'), b9 = g('b9'), b10 = g('b10'), b16 = g('b16');
+
+    // 計算公式說明：
+    // (結目長度總和 * 校正比例 + 耳高總和) * 重複次數
+
+    // Shuttle A: (B2*1 + B3*0.1 + B5*0.9) * f + (B7*0.2 + B10*0.2)
+    var dsA = (b2 * 1) + (b3 * 0.1) + (b5 * 0.9);
+    var picotA = (b7 * 0.2) + (b10 * 0.2);
+    var totalA = (dsA * f + picotA) * b16;
+
+    // Shuttle B: (B4*1 + B5*0.1 + B3*0.9) * f + (B9*0.2 + B8*0.2)
+    var dsB = (b4 * 1) + (b5 * 0.1) + (b3 * 0.9);
+    var picotB = (b9 * 0.2) + (b8 * 0.2);
+    var totalB = (dsB * f + picotB) * b16;
+
+    document.getElementById('ra').innerHTML = totalA.toFixed(1);
+    document.getElementById('rb').innerHTML = totalB.toFixed(1);
+}
+window.onload = autoCalc;
+</script>
+
+</body></html>
