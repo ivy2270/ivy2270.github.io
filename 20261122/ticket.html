@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>現場取票核銷系統</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #baa483;
+      --primary-dark: #9e8766;
+      --primary-light: #f6f3ee;
+      --primary-border: #e4dcd0;
+      --text-main: #2f2a24;
+      --text-muted: #786f64;
+      --bg-page: #faf8f5;
+      --white: #ffffff;
+      --success: #4a7c59;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.45;
+      padding-bottom: 48px;
+    }
+
+    /* 頂部標題與統計列 */
+    header {
+      background-color: var(--primary);
+      color: var(--white);
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(186, 164, 131, 0.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .stats-badge {
+      background: rgba(255, 255, 255, 0.22);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    /* 主容器 */
+    .container {
+      max-width: 960px;
+      margin: 16px auto;
+      padding: 0 14px;
+    }
+
+    /* 搜尋與篩選區 */
+    .filter-bar {
+      background: var(--white);
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid var(--primary-border);
+      display: grid;
+      grid-template-columns: 1.4fr 1fr auto;
+      gap: 10px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+
+    .filter-actions {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .sub-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 0 2px;
+    }
+
+    .sink-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-main);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .sink-toggle input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--primary-dark);
+      cursor: pointer;
+    }
+
+    @media (max-width: 680px) {
+      .filter-bar {
+        grid-template-columns: 1fr 1fr;
+      }
+      .filter-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+      }
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .input-group label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .search-box-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box-wrap input[type="text"] {
+      padding-right: 34px;
+    }
+
+    .btn-clear-search {
+      position: absolute;
+      right: 8px;
+      width: 22px;
+      height: 22px;
+      border: none;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      border-radius: 50%;
+      font-size: 0.85rem;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-clear-search.visible {
+      display: inline-flex;
+    }
+
+    .btn-clear-search:hover {
+      background: var(--primary);
+      color: var(--white);
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1.5px solid var(--primary-border);
+      border-radius: 8px;
+      font-size: 0.92rem;
+      color: var(--text-main);
+      background-color: var(--white);
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-action {
+      padding: 9px 13px;
+      background-color: var(--primary-light);
+      color: var(--primary-dark);
+      border: 1.5px solid var(--primary-border);
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-action:hover {
+      background-color: var(--primary);
+      color: var(--white);
+      border-color: var(--primary);
+    }
+
+    /* 手機版快速跳號列（桌機隱藏） */
+    .quick-jump-bar {
+      display: none;
+    }
+
+    @media (max-width: 680px) {
+      .quick-jump-bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+        background: var(--white);
+        border: 1px solid var(--primary-border);
+        border-radius: 10px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .quick-jump-bar::-webkit-scrollbar {
+        display: none;
+      }
+      .jump-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding-right: 2px;
+      }
+      .jump-pill {
+        flex-shrink: 0;
+        background: var(--primary-light);
+        color: var(--primary-dark);
+        border: 1px solid var(--primary-border);
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .jump-pill:active {
+        background: var(--primary);
+        color: var(--white);
+      }
+    }
+
+    /* 表格與卡片清單 */
+    .table-wrapper {
+      background: var(--white);
+      border-radius: 12px;
+      border: 1px solid var(--primary-border);
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    thead {
+      background-color: var(--primary-light);
+      border-bottom: 1.5px solid var(--primary-border);
+    }
+
+    th {
+      padding: 12px 14px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid #f0ece6;
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr.is-checked {
+      background-color: #faf9f7;
+    }
+
+    tr.is-checked .col-id,
+    tr.is-checked .col-recipient {
+      color: var(--text-muted);
+      text-decoration: line-through;
+    }
+
+    tr.highlight-flash {
+      animation: flashHighlight 1.2s ease;
+    }
+
+    @keyframes flashHighlight {
+      0% { background-color: rgba(186, 164, 131, 0.35); }
+      100% { background-color: transparent; }
+    }
+
+    .col-id {
+      font-weight: 700;
+      color: var(--primary-dark);
+      width: 76px;
+    }
+
+    .col-recipient {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .sender-tag {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    /* 備註欄位與靜默儲存狀態 */
+    .note-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .note-input {
+      width: 100%;
+      min-width: 140px;
+      padding: 6px 9px !important;
+      font-size: 0.88rem !important;
+      background: #fdfcfb !important;
+    }
+
+    .save-hint {
+      font-size: 0.72rem;
+      white-space: nowrap;
+      color: var(--text-muted);
+      min-width: 46px;
+    }
+
+    .save-hint.saved {
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    /* 自訂大尺寸 Checkbox */
+    .checkbox-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    input[type="checkbox"].ticket-check {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 26px;
+      height: 26px;
+      border: 2px solid var(--primary);
+      border-radius: 7px;
+      background-color: var(--white);
+      cursor: pointer;
+      position: relative;
+      transition: all 0.18s ease;
+    }
+
+    input[type="checkbox"].ticket-check:checked {
+      background-color: var(--primary);
+    }
+
+    input[type="checkbox"].ticket-check:checked::after {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 3px;
+      width: 6px;
+      height: 12px;
+      border: solid var(--white);
+      border-width: 0 2.5px 2.5px 0;
+      transform: rotate(45deg);
+    }
+
+    /* 手機版精簡卡片設計 */
+    @media (max-width: 680px) {
+      thead { display: none; }
+      table, tbody, tr, td { display: block; width: 100%; }
+      tr {
+        padding: 10px 12px;
+        border-bottom: 1.5px solid var(--primary-border);
+        position: relative;
+      }
+      td {
+        padding: 2px 0;
+        border: none;
+      }
+      .col-meta-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding-right: 36px;
+      }
+      .col-id {
+        width: auto;
+        font-size: 0.92rem;
+      }
+      .col-recipient {
+        font-size: 1rem;
+      }
+      .col-sender {
+        margin-top: 2px;
+      }
+      .col-check {
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        transform: translateY(-50%);
+        width: auto;
+      }
+      .col-note {
+        margin-top: 6px;
+        padding-right: 36px;
+      }
+      .note-input {
+        padding: 5px 8px !important;
+        font-size: 0.85rem !important;
+      }
+    }
+
+    .status-msg {
+      text-align: center;
+      padding: 44px 16px;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1>取票核銷名單</h1>
+    <div class="stats-badge" id="statsBadge">載入中...</div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="filter-bar">
+    <div class="input-group">
+      <label for="searchKeyword">搜尋編號 / 取票人</label>
+      <div class="search-box-wrap">
+        <input type="text" id="searchKeyword" placeholder="輸入編號或姓名關鍵字...">
+        <button type="button" class="btn-clear-search" id="btnClearSearch" title="清除搜尋字">×</button>
+      </div>
+    </div>
+    <div class="input-group">
+      <label for="filterSender">篩選寄票人</label>
+      <select id="filterSender">
+        <option value="">全部寄票人</option>
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button type="button" class="btn-action" id="btnResetFilters" title="清除搜尋與寄票人篩選">重設篩選</button>
+      <button type="button" class="btn-action" id="btnRefresh" title="從試算表重新同步最新狀態">↻ 重新整理</button>
+    </div>
+  </div>
+
+  <div class="sub-toolbar">
+    <label class="sink-toggle">
+      <input type="checkbox" id="sinkCheckedToggle" checked>
+      <span>已領票自動沉底</span>
+    </label>
+  </div>
+
+  <!-- 手機版快速跳號索引列 -->
+  <div class="quick-jump-bar" id="quickJumpBar">
+    <span class="jump-label">跳號：</span>
+  </div>
+
+  <div class="table-wrapper">
+    <div id="loadingBox" class="status-msg">正在讀取試算表資料...</div>
+    <table id="ticketTable" style="display:none;">
+      <thead>
+        <tr>
+          <th>編號</th>
+          <th>取票人</th>
+          <th>寄票人</th>
+          <th>備註（輸入自動儲存）</th>
+          <th style="text-align:center;">領票</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="emptyBox" class="status-msg" style="display:none;">找不到符合條件的取票資料</div>
+  </div>
+</div>
+
+<script>
+  // ⚠️ 請將下方引號內的網址替換為你的 Google Apps Script 網頁應用程式網址
+  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwcbmiAtLmSiYRvz_4CbumCCB8xUEDOwrAihFMiqnkdQxKSHpCE_-h-ls63YWDAb0f7gA/exec';
+
+  let allTickets = [];
+  const noteTimers = {};
+  let reorderTimer = null;
+
+  const searchInput = document.getElementById('searchKeyword');
+  const btnClearSearch = document.getElementById('btnClearSearch');
+  const senderSelect = document.getElementById('filterSender');
+  const btnResetFilters = document.getElementById('btnResetFilters');
+  const sinkCheckedToggle = document.getElementById('sinkCheckedToggle');
+  const quickJumpBar = document.getElementById('quickJumpBar');
+  const tableBody = document.getElementById('tableBody');
+  const ticketTable = document.getElementById('ticketTable');
+  const loadingBox = document.getElementById('loadingBox');
+  const emptyBox = document.getElementById('emptyBox');
+  const statsBadge = document.getElementById('statsBadge');
+  const btnRefresh = document.getElementById('btnRefresh');
+
+  // 依編號自然排序
+  function compareById(a, b) {
+    return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' });
+  }
+
+  // 取得目前生效的排序列表（已領票沉底時：未領票在前、已領票在後，各自依編號排序）
+  function getSortedTickets() {
+    const sinkChecked = sinkCheckedToggle.checked;
+    return [...allTickets].sort((a, b) => {
+      if (sinkChecked && a.checked !== b.checked) {
+        return a.checked ? 1 : -1;
+      }
+      return compareById(a, b);
+    });
+  }
+
+  // 1. 取得資料
+  async function fetchTickets() {
+    loadingBox.style.display = 'block';
+    ticketTable.style.display = 'none';
+    emptyBox.style.display = 'none';
+
+    try {
+      const res = await fetch(GAS_API_URL);
+      const json = await res.json();
+
+      if (json.status === 'success') {
+        allTickets = json.data.sort(compareById);
+        populateSenderDropdown();
+        updateStats();
+        renderTable();
+      } else {
+        loadingBox.textContent = '讀取失敗：' + (json.message || '未知錯誤');
+      }
+    } catch (err) {
+      console.error(err);
+      loadingBox.textContent = '連線失敗，請確認 GAS 網址與權限設定。';
+    }
+  }
+
+  // 2. 產生寄票人下拉選單
+  function populateSenderDropdown() {
+    const currentVal = senderSelect.value;
+    const senders = [...new Set(allTickets.map(t => t.sender).filter(Boolean))].sort();
+
+    senderSelect.innerHTML = '<option value="">全部寄票人</option>';
+    senders.forEach(sender => {
+      const opt = document.createElement('option');
+      opt.value = sender;
+      opt.textContent = sender;
+      senderSelect.appendChild(opt);
+    });
+    senderSelect.value = currentVal;
+  }
+
+  // 3. 更新已領票統計
+  function updateStats() {
+    const total = allTickets.length;
+    const checkedCount = allTickets.filter(t => t.checked).length;
+    statsBadge.textContent = `已領票：${checkedCount} / ${total}`;
+  }
+
+  // 4. 更新手機版快速跳號列
+  function renderQuickJump(filtered) {
+    quickJumpBar.innerHTML = '<span class="jump-label">跳號：</span>';
+    if (filtered.length === 0) return;
+
+    const step = filtered.length > 40 ? Math.ceil(filtered.length / 25) : 1;
+    const targets = filtered.filter((_, idx) => idx % step === 0);
+
+    targets.forEach(item => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'jump-pill';
+      btn.textContent = `#${item.id}`;
+      btn.addEventListener('click', () => {
+        const rowEl = document.getElementById(`row-${CSS.escape(item.id)}`);
+        if (!rowEl) return;
+        const headerOffset = document.querySelector('header').offsetHeight + 12;
+        const elementPosition = rowEl.getBoundingClientRect().top + window.pageYOffset;
+        window.scrollTo({
+          top: elementPosition - headerOffset,
+          behavior: 'smooth'
+        });
+        rowEl.classList.remove('highlight-flash');
+        void rowEl.offsetWidth;
+        rowEl.classList.add('highlight-flash');
+      });
+      quickJumpBar.appendChild(btn);
+    });
+  }
+
+  // 5. 渲染畫面
+  function renderTable() {
+    loadingBox.style.display = 'none';
+    const keyword = searchInput.value.trim().toLowerCase();
+    const selectedSender = senderSelect.value;
+
+    btnClearSearch.classList.toggle('visible', searchInput.value.length > 0);
+
+    const sortedList = getSortedTickets();
+    const filtered = sortedList.filter(item => {
+      const matchId = item.id.toLowerCase().includes(keyword);
+      const matchRecipient = item.recipient.toLowerCase().includes(keyword);
+      const matchKeyword = !keyword || matchId || matchRecipient;
+      const matchSender = !selectedSender || item.sender === selectedSender;
+      return matchKeyword && matchSender;
+    });
+
+    renderQuickJump(filtered);
+
+    if (filtered.length === 0) {
+      ticketTable.style.display = 'none';
+      emptyBox.style.display = 'block';
+      return;
+    }
+
+    emptyBox.style.display = 'none';
+    ticketTable.style.display = 'table';
+    tableBody.innerHTML = '';
+
+    filtered.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.id = `row-${item.id}`;
+      if (item.checked) tr.classList.add('is-checked');
+
+      tr.innerHTML = `
+        <td class="col-id">#${escapeHtml(item.id)}</td>
+        <td class="col-recipient">${escapeHtml(item.recipient)}</td>
+        <td class="col-sender"><span class="sender-tag">${escapeHtml(item.sender || '無')}</span></td>
+        <td class="col-note">
+          <div class="note-box">
+            <input type="text" class="note-input" value="${escapeHtml(item.note)}" placeholder="備註（自動存）..." data-id="${escapeHtml(item.id)}">
+            <span class="save-hint" id="hint-${escapeHtml(item.id)}"></span>
+          </div>
+        </td>
+        <td class="col-check">
+          <div class="checkbox-wrap">
+            <input type="checkbox" class="ticket-check" ${item.checked ? 'checked' : ''} data-id="${escapeHtml(item.id)}">
+          </div>
+        </td>
+      `;
+
+      if (window.innerWidth <= 680) {
+        const idTd = tr.querySelector('.col-id');
+        const recTd = tr.querySelector('.col-recipient');
+        const metaWrap = document.createElement('div');
+        metaWrap.className = 'col-meta-row';
+        metaWrap.appendChild(idTd);
+        metaWrap.appendChild(recTd);
+        tr.prepend(metaWrap);
+      }
+
+      const checkbox = tr.querySelector('.ticket-check');
+      checkbox.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        item.checked = isChecked;
+        tr.classList.toggle('is-checked', isChecked);
+        updateStats();
+        syncToSheet(item.id, 'checked', isChecked);
+
+        // 若開啟「已領票自動沉底」，稍作延遲再重排避免剛勾選時列立刻跳走
+        if (sinkCheckedToggle.checked) {
+          clearTimeout(reorderTimer);
+          reorderTimer = setTimeout(() => {
+            renderTable();
+          }, 400);
+        }
+      });
+
+      const noteInput = tr.querySelector('.note-input');
+      const hintEl = tr.querySelector('.save-hint');
+
+      noteInput.addEventListener('input', (e) => {
+        const newVal = e.target.value;
+        item.note = newVal;
+        hintEl.textContent = '輸入中...';
+        hintEl.classList.remove('saved');
+
+        clearTimeout(noteTimers[item.id]);
+        noteTimers[item.id] = setTimeout(() => {
+          triggerNoteSave(item.id, newVal, hintEl);
+        }, 1200);
+      });
+
+      noteInput.addEventListener('blur', (e) => {
+        clearTimeout(noteTimers[item.id]);
+        if (hintEl.textContent === '輸入中...') {
+          triggerNoteSave(item.id, e.target.value, hintEl);
+        }
+      });
+
+      tableBody.appendChild(tr);
+    });
+  }
+
+  async function triggerNoteSave(id, value, hintEl) {
+    hintEl.textContent = '儲存中...';
+    const ok = await syncToSheet(id, 'note', value);
+    if (ok) {
+      hintEl.textContent = '已儲存 ✓';
+      hintEl.classList.add('saved');
+      setTimeout(() => {
+        if (hintEl.textContent === '已儲存 ✓') hintEl.textContent = '';
+      }, 2500);
+    } else {
+      hintEl.textContent = '儲存失敗';
+    }
+  }
+
+  async function syncToSheet(id, field, value) {
+    try {
+      const res = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify({ id, field, value })
+      });
+      const json = await res.json();
+      return json.status === 'success';
+    } catch (err) {
+      console.error('同步失敗:', err);
+      return false;
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // 快速清除搜尋字
+  btnClearSearch.addEventListener('click', () => {
+    searchInput.value = '';
+    searchInput.focus();
+    renderTable();
+  });
+
+  // 一鍵重設所有篩選條件
+  btnResetFilters.addEventListener('click', () => {
+    searchInput.value = '';
+    senderSelect.value = '';
+    renderTable();
+  });
+
+  sinkCheckedToggle.addEventListener('change', renderTable);
+  searchInput.addEventListener('input', renderTable);
+  senderSelect.addEventListener('change', renderTable);
+  btnRefresh.addEventListener('click', fetchTickets);
+
+  let lastIsMobile = window.innerWidth <= 680;
+  window.addEventListener('resize', () => {
+    const nowIsMobile = window.innerWidth <= 680;
+    if (nowIsMobile !== lastIsMobile) {
+      lastIsMobile = nowIsMobile;
+      renderTable();
+    }
+  });
+
+  fetchTickets();
+</script>
+</body>
+</html>
